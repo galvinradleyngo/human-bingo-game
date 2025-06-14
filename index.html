@@ -8,17 +8,16 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     
-    <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <!-- Firebase v8 (compatible) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 </head>
 <body>
     <div id="root"></div>
     <script type="text/babel">
-        // 🔥 REPLACE THIS WITH YOUR FIREBASE CONFIG FROM STEP 2
-       const firebaseConfig = {
+        // 🔥 REPLACE WITH YOUR ACTUAL FIREBASE CONFIG
+      const firebaseConfig = {
   apiKey: "AIzaSyCKVkzw8bHYiaqwS6J0xrTplhnXYdEQwiQ",
   authDomain: "human-bingo-game.firebaseapp.com",
   projectId: "human-bingo-game",
@@ -28,11 +27,85 @@
 };
         
         // Initialize Firebase
-  firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Lucide Icons as React components
+        const Camera = () => React.createElement('svg', {
+            width: 24, height: 24, viewBox: '0 0 24 24', fill: 'none',
+            stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round'
+        }, [
+            React.createElement('path', { key: 1, d: 'm14.5 4-2-2h-5l-2 2h-2a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2z' }),
+            React.createElement('circle', { key: 2, cx: 12, cy: 13, r: 3 })
+        ]);
+
+        const Settings = () => React.createElement('svg', {
+            width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none',
+            stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round'
+        }, [
+            React.createElement('circle', { key: 1, cx: 12, cy: 12, r: 3 }),
+            React.createElement('path', { key: 2, d: 'm12 1 2.09 5.26L22 9l-5.26 2.09L14 22l-2.09-5.26L2 14l5.26-2.09L10 2z' })
+        ]);
+
+        const RotateCcw = () => React.createElement('svg', {
+            width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none',
+            stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round'
+        }, [
+            React.createElement('path', { key: 1, d: 'M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8' }),
+            React.createElement('path', { key: 2, d: 'M3 3v5h5' })
+        ]);
+
+        const Plus = () => React.createElement('svg', {
+            width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none',
+            stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round'
+        }, [
+            React.createElement('path', { key: 1, d: 'M5 12h14' }),
+            React.createElement('path', { key: 2, d: 'M12 5v14' })
+        ]);
+
+        const Trash2 = () => React.createElement('svg', {
+            width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none',
+            stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round'
+        }, [
+            React.createElement('path', { key: 1, d: 'M3 6h18' }),
+            React.createElement('path', { key: 2, d: 'M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6' }),
+            React.createElement('path', { key: 3, d: 'M8 6V4c0-1 1-2 2-2h4c-1 0 2 1 2 2v2' })
+        ]);
+
+        const Check = () => React.createElement('svg', {
+            width: 12, height: 12, viewBox: '0 0 24 24', fill: 'none',
+            stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round'
+        }, [
+            React.createElement('polyline', { key: 1, points: '20,6 9,17 4,12' })
+        ]);
+
+        const Copy = () => React.createElement('svg', {
+            width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none',
+            stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round'
+        }, [
+            React.createElement('rect', { key: 1, width: 14, height: 14, x: 8, y: 8, rx: 2, ry: 2 }),
+            React.createElement('path', { key: 2, d: 'M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2' })
+        ]);
+
+        const Eye = () => React.createElement('svg', {
+            width: 20, height: 20, viewBox: '0 0 24 24', fill: 'none',
+            stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round'
+        }, [
+            React.createElement('path', { key: 1, d: 'M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z' }),
+            React.createElement('circle', { key: 2, cx: 12, cy: 12, r: 3 })
+        ]);
+
+        const EyeOff = () => React.createElement('svg', {
+            width: 20, height: 20, viewBox: '0 0 24 24', fill: 'none',
+            stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round'
+        }, [
+            React.createElement('path', { key: 1, d: 'M9.88 9.88a3 3 0 1 0 4.24 4.24' }),
+            React.createElement('path', { key: 2, d: 'M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68' }),
+            React.createElement('path', { key: 3, d: 'M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61' }),
+            React.createElement('line', { key: 4, x1: 2, x2: 22, y1: 2, y2: 22 })
+        ]);
 
         const { useState, useRef, useEffect } = React;
-        const { Camera, Edit3, Check, RotateCcw, Settings, Plus, Trash2, Copy, Eye, EyeOff } = lucide;
 
         const HumanBingoGame = () => {
             // Default categories
@@ -53,8 +126,6 @@ const db = firebase.firestore();
             const [completedBoxes, setCompletedBoxes] = useState(new Set());
             const [photos, setPhotos] = useState({});
             const [names, setNames] = useState({});
-            const [editingIndex, setEditingIndex] = useState(null);
-            const [tempCategory, setTempCategory] = useState('');
             const [previewIndex, setPreviewIndex] = useState(null);
             const [screenSize, setScreenSize] = useState('large');
             const [nameInput, setNameInput] = useState('');
@@ -95,7 +166,7 @@ const db = firebase.firestore();
                         const gameIdParam = urlParams.get('game');
                         
                         if (gameIdParam) {
-                            // Load custom game from Firebase
+                            console.log('Loading game:', gameIdParam);
                             const gameDoc = await db.collection('games').doc(gameIdParam).get();
                             if (gameDoc.exists) {
                                 const gameData = gameDoc.data();
@@ -104,10 +175,13 @@ const db = firebase.firestore();
                                 setGameTitle(gameData.title || 'Custom Human Bingo');
                                 setGameDescription(gameData.description || 'Custom selfie bingo game!');
                                 setCategories(gameData.categories || defaultCategories);
+                                console.log('Game loaded successfully');
+                            } else {
+                                console.log('Game not found');
                             }
                         }
                     } catch (error) {
-                        console.log('Could not load custom game, using defaults');
+                        console.log('Could not load custom game:', error);
                     }
                 };
 
@@ -147,6 +221,7 @@ const db = firebase.firestore();
                     if (videoRef.current) videoRef.current.srcObject = mediaStream;
                     setUseFileInput(false);
                 } catch (error) {
+                    console.log('Camera failed, using file input');
                     setUseFileInput(true);
                 }
             };
@@ -260,6 +335,8 @@ const db = firebase.firestore();
                 }
 
                 setIsCreatingLink(true);
+                console.log('Creating share link...');
+                
                 try {
                     const gameData = {
                         title: gameTitle,
@@ -270,13 +347,17 @@ const db = firebase.firestore();
                         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
                     };
 
+                    console.log('Saving game data:', gameData);
                     const docRef = await db.collection('games').add(gameData);
+                    console.log('Game saved with ID:', docRef.id);
+                    
                     const newShareLink = `${window.location.origin}${window.location.pathname}?game=${docRef.id}`;
                     setShareLink(newShareLink);
                     setGameId(docRef.id);
+                    console.log('Share link created:', newShareLink);
                 } catch (error) {
                     console.error('Error creating share link:', error);
-                    alert('Failed to create share link. Please try again.');
+                    alert('Failed to create share link: ' + error.message);
                 } finally {
                     setIsCreatingLink(false);
                 }
@@ -300,297 +381,380 @@ const db = firebase.firestore();
                 setShowCustomizer(false);
             };
 
-            return (
-                <div className="min-h-screen bg-gradient-to-br from-purple-400 via-pink-500 to-red-500 p-4 pb-8">
-                    <div className={`${screenSize === 'tiny' ? 'max-w-sm' : 'max-w-md'} mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden`}>
-                        {/* Header */}
-                        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 text-white">
-                            <h1 className={`${screenSize === 'tiny' ? 'text-xl' : 'text-2xl'} font-bold text-center mb-2`}>
-                                📸 {gameTitle}
-                            </h1>
-                            <p className={`text-center text-indigo-100 ${screenSize === 'tiny' ? 'text-xs' : 'text-sm'}`}>
-                                {screenSize === 'tiny' ? 'Take selfies with friends!' : gameDescription}
-                            </p>
-                            <div className="mt-4 flex justify-between items-center">
-                                <span className={`${screenSize === 'tiny' ? 'text-xs' : 'text-sm'} bg-white/20 px-3 py-1 rounded-full`}>
-                                    {completedCount}/{categories.length} completed
-                                </span>
-                                <div className="flex gap-2">
-                                    <button onClick={openCustomizer} className="p-2 bg-blue-500/20 border border-blue-300/30 rounded-full hover:bg-blue-500/30 transition-colors">
-                                        <Settings size={screenSize === 'tiny' ? 14 : 16} />
-                                    </button>
-                                    <button onClick={resetGame} className="p-2 bg-white/20 rounded-full hover:bg-white/30 transition-colors">
-                                        <RotateCcw size={screenSize === 'tiny' ? 14 : 16} />
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
+            return React.createElement('div', { className: "min-h-screen bg-gradient-to-br from-purple-400 via-pink-500 to-red-500 p-4 pb-8" }, [
+                React.createElement('div', { 
+                    key: 'main', 
+                    className: `${screenSize === 'tiny' ? 'max-w-sm' : 'max-w-md'} mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden` 
+                }, [
+                    // Header
+                    React.createElement('div', { key: 'header', className: "bg-gradient-to-r from-indigo-600 to-purple-600 p-6 text-white" }, [
+                        React.createElement('h1', { 
+                            key: 'title', 
+                            className: `${screenSize === 'tiny' ? 'text-xl' : 'text-2xl'} font-bold text-center mb-2` 
+                        }, `📸 ${gameTitle}`),
+                        React.createElement('p', { 
+                            key: 'desc', 
+                            className: `text-center text-indigo-100 ${screenSize === 'tiny' ? 'text-xs' : 'text-sm'}` 
+                        }, screenSize === 'tiny' ? 'Take selfies with friends!' : gameDescription),
+                        React.createElement('div', { key: 'controls', className: "mt-4 flex justify-between items-center" }, [
+                            React.createElement('span', { 
+                                key: 'progress', 
+                                className: `${screenSize === 'tiny' ? 'text-xs' : 'text-sm'} bg-white/20 px-3 py-1 rounded-full` 
+                            }, `${completedCount}/${categories.length} completed`),
+                            React.createElement('div', { key: 'buttons', className: "flex gap-2" }, [
+                                React.createElement('button', {
+                                    key: 'settings',
+                                    onClick: openCustomizer,
+                                    className: "p-2 bg-blue-500/20 border border-blue-300/30 rounded-full hover:bg-blue-500/30 transition-colors"
+                                }, React.createElement(Settings)),
+                                React.createElement('button', {
+                                    key: 'reset',
+                                    onClick: resetGame,
+                                    className: "p-2 bg-white/20 rounded-full hover:bg-white/30 transition-colors"
+                                }, React.createElement(RotateCcw))
+                            ])
+                        ])
+                    ]),
 
-                        {/* Customizer Modal */}
-                        {showCustomizer && (
-                            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
-                                <div className="bg-white rounded-3xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                                    <h2 className="text-2xl font-bold text-center mb-6 text-gray-800">🎨 Customize Your Game</h2>
-                                    
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Game Title</label>
-                                        <input
-                                            type="text"
-                                            value={gameTitle}
-                                            onChange={(e) => setGameTitle(e.target.value)}
-                                            className="w-full p-3 border-2 border-gray-300 rounded-xl focus:border-purple-500 focus:outline-none"
-                                            placeholder="Enter your game title"
-                                        />
-                                    </div>
-
-                                    <div className="mb-6">
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Game Description</label>
-                                        <input
-                                            type="text"
-                                            value={gameDescription}
-                                            onChange={(e) => setGameDescription(e.target.value)}
-                                            className="w-full p-3 border-2 border-gray-300 rounded-xl focus:border-purple-500 focus:outline-none"
-                                            placeholder="Enter your game description"
-                                        />
-                                    </div>
-
-                                    <div className="mb-6">
-                                        <div className="flex justify-between items-center mb-3">
-                                            <label className="block text-sm font-medium text-gray-700">Categories ({customCategories.length})</label>
-                                            <button onClick={addCustomCategory} className="bg-green-500 text-white p-2 rounded-full hover:bg-green-600 transition-colors">
-                                                <Plus size={16} />
-                                            </button>
-                                        </div>
-                                        
-                                        <div className="space-y-3 max-h-60 overflow-y-auto">
-                                            {customCategories.map((category, index) => (
-                                                <div key={index} className="flex gap-2">
-                                                    <input
-                                                        type="text"
-                                                        value={category}
-                                                        onChange={(e) => updateCustomCategory(index, e.target.value)}
-                                                        className="flex-1 p-3 border-2 border-gray-300 rounded-xl focus:border-purple-500 focus:outline-none"
-                                                        placeholder={`Category ${index + 1}`}
-                                                    />
-                                                    {customCategories.length > 1 && (
-                                                        <button onClick={() => removeCustomCategory(index)} className="bg-red-500 text-white p-3 rounded-xl hover:bg-red-600 transition-colors">
-                                                            <Trash2 size={16} />
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    <div className="mb-6">
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Creator Password (for editing later)</label>
-                                        <div className="relative">
-                                            <input
-                                                type={showPassword ? 'text' : 'password'}
-                                                value={creatorPassword}
-                                                onChange={(e) => setCreatorPassword(e.target.value)}
-                                                className="w-full p-3 pr-12 border-2 border-gray-300 rounded-xl focus:border-purple-500 focus:outline-none"
-                                                placeholder="Enter a password to protect your game"
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowPassword(!showPassword)}
-                                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                                            >
-                                                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {shareLink && (
-                                        <div className="mb-6 p-4 bg-green-50 border-2 border-green-200 rounded-xl">
-                                            <h3 className="font-semibold text-green-800 mb-2">🎉 Your Share Link is Ready!</h3>
-                                            <div className="flex gap-2">
-                                                <input type="text" value={shareLink} readOnly className="flex-1 p-2 bg-white border border-green-300 rounded-lg text-sm" />
-                                                <button onClick={copyShareLink} className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors">
-                                                    <Copy size={16} />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    <div className="flex gap-3">
-                                        <button onClick={() => setShowCustomizer(false)} className="flex-1 bg-gray-500 text-white py-3 px-4 rounded-full font-semibold hover:bg-gray-600 transition-colors">
-                                            Cancel
-                                        </button>
-                                        <button onClick={applyCustomization} className="flex-1 bg-purple-500 text-white py-3 px-4 rounded-full font-semibold hover:bg-purple-600 transition-colors">
-                                            Apply Changes
-                                        </button>
-                                        <button onClick={createShareLink} disabled={isCreatingLink} className="flex-1 bg-blue-500 text-white py-3 px-4 rounded-full font-semibold hover:bg-blue-600 transition-colors disabled:opacity-50">
-                                            {isCreatingLink ? 'Creating...' : 'Create Share Link'}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Progress Bar */}
-                        {cameraIndex === null && previewIndex === null && !showNameInput && !showCustomizer && (
-                            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 z-10">
-                                <div className="bg-gray-200 rounded-full h-3 overflow-hidden">
-                                    <div className="bg-gradient-to-r from-purple-500 to-pink-500 h-full transition-all duration-500" 
-                                         style={{ width: `${(completedCount / categories.length) * 100}%` }} />
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Name Input Modal */}
-                        {showNameInput && (
-                            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                                <div className="bg-white rounded-3xl p-6 max-w-sm w-full">
-                                    <h2 className="text-xl font-bold text-center mb-4 text-gray-800">📝 Who's in the photo?</h2>
-                                    <input
-                                        type="text"
-                                        value={nameInput}
-                                        onChange={(e) => setNameInput(e.target.value)}
-                                        placeholder="Enter their name (optional)"
-                                        className="w-full p-3 border-2 border-gray-300 rounded-xl text-center focus:border-purple-500 focus:outline-none mb-4"
-                                        autoFocus
-                                        onKeyDown={(e) => e.key === 'Enter' ? saveName() : e.key === 'Escape' ? skipName() : null}
-                                    />
-                                    <div className="flex gap-3">
-                                        <button onClick={skipName} className="flex-1 bg-gray-500 text-white py-3 px-4 rounded-full font-semibold hover:bg-gray-600 transition-colors">Skip</button>
-                                        <button onClick={saveName} className="flex-1 bg-purple-500 text-white py-3 px-4 rounded-full font-semibold hover:bg-purple-600 transition-colors">Save</button>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Photo Preview */}
-                        {previewIndex !== null && (
-                            <div className="fixed inset-0 bg-black z-50 flex flex-col" onClick={() => setPreviewIndex(null)}>
-                                <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-4 text-white">
-                                    <h2 className="text-lg font-semibold text-center">{categories[previewIndex]}</h2>
-                                    {names[previewIndex] && <p className="text-center text-indigo-100 mt-1 font-medium">with {names[previewIndex]}</p>}
-                                </div>
-                                <div className="flex-1 flex items-center justify-center p-4">
-                                    <img src={photos[previewIndex]} alt={categories[previewIndex]} className="max-w-full max-h-full object-contain rounded-lg shadow-2xl" onClick={(e) => e.stopPropagation()} />
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Camera View */}
-                        {cameraIndex !== null && (
-                            <div className="fixed inset-0 bg-black z-50 flex flex-col">
-                                <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-4 text-white">
-                                    <h2 className="text-lg font-semibold text-center">{categories[cameraIndex]}</h2>
-                                    <p className="text-center text-sm text-indigo-100 mt-1">Take a selfie with someone who matches this!</p>
-                                </div>
-                                
-                                <div className="flex-1 flex items-center justify-center p-4">
-                                    {useFileInput ? (
-                                        <div className="text-center">
-                                            <div className="bg-white rounded-2xl p-8 max-w-sm">
-                                                <Camera size={48} className="mx-auto mb-4 text-purple-500" />
-                                                <p className="text-gray-700 mb-4">Choose a photo from your device</p>
-                                                <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileInput} className="hidden" />
-                                                <div className="flex gap-3">
-                                                    <button onClick={() => fileInputRef.current?.click()} className="flex-1 bg-purple-500 text-white py-3 px-4 rounded-full font-semibold hover:bg-purple-600 transition-colors">Choose Photo</button>
-                                                    <button onClick={stopCamera} className="flex-1 bg-gray-500 text-white py-3 px-4 rounded-full font-semibold hover:bg-gray-600 transition-colors">Cancel</button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <>
-                                            <video ref={videoRef} autoPlay playsInline className="max-w-full max-h-full object-contain rounded-lg shadow-2xl" />
-                                            <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex gap-4">
-                                                <button onClick={capturePhoto} className="bg-white p-4 rounded-full shadow-lg hover:bg-gray-100 transition-colors">
-                                                    <Camera size={32} className="text-purple-500" />
-                                                </button>
-                                                <button onClick={stopCamera} className="bg-red-500 text-white px-6 py-3 rounded-full font-semibold hover:bg-red-600 transition-colors">Cancel</button>
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Bingo Grid */}
-                        {cameraIndex === null && previewIndex === null && !showNameInput && !showCustomizer && (
-                            <div className="p-6 pb-8">
-                                <div className={`grid ${layoutConfig.grid} ${layoutConfig.spacing}`}>
-                                    {categories.map((category, index) => (
-                                        <div
-                                            key={index}
-                                            className={`relative aspect-square border-2 rounded-xl p-3 flex flex-col items-center justify-center text-center transition-all
-                                                ${completedBoxes.has(index) ? 'border-green-500 bg-green-50 cursor-pointer hover:border-green-600' : 'border-gray-300 bg-gray-50 hover:border-purple-400 hover:bg-purple-50'}
-                                                ${screenSize === 'tiny' ? 'min-h-[120px]' : ''}`}
-                                            onClick={() => completedBoxes.has(index) && setPreviewIndex(index)}
-                                        >
-                                            {completedBoxes.has(index) && photos[index] && (
-                                                <img src={photos[index]} alt={category} className="absolute inset-0 w-full h-full object-cover rounded-xl" />
-                                            )}
-                                            
-                                            {completedBoxes.has(index) && (
-                                                <div className="absolute top-2 right-2 bg-green-500 rounded-full p-1">
-                                                    <Check size={12} className="text-white" />
-                                                </div>
-                                            )}
-
-                                            {completedBoxes.has(index) && names[index] && (
-                                                <div className="absolute bottom-1 left-1 right-1 bg-black/70 text-white text-xs px-2 py-1 rounded text-center truncate">
-                                                    {names[index]}
-                                                </div>
-                                            )}
-
-                                            <span className={`${layoutConfig.textSize} font-medium z-10 ${completedBoxes.has(index) ? 'text-white bg-black/50 px-2 py-1 rounded' : 'text-gray-700'}`}>
-                                                {category}
-                                            </span>
-
-                                            {!completedBoxes.has(index) && (
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        startCamera(index);
-                                                    }}
-                                                    className={`mt-2 ${layoutConfig.buttonSize} bg-purple-500 text-white rounded-full hover:bg-purple-600 transition-colors z-10`}
-                                                >
-                                                    <Camera size={screenSize === 'tiny' ? 20 : 16} />
-                                                </button>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Footer */}
-                        <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
-                            <p className="text-center text-xs text-gray-500">
-                                Licensed under{' '}
-                                <a 
-                                    href="https://creativecommons.org/licenses/by-nc/4.0/" 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="text-purple-600 hover:text-purple-700 underline"
-                                >
-                                    Creative Commons Non-Commercial 4.0
-                                </a>
-                            </p>
-                        </div>
-
-                        {/* Hidden canvas for photo capture */}
-                        <canvas ref={canvasRef} style={{ display: 'none' }} />
+                    // Customizer Modal
+                    showCustomizer && React.createElement('div', { 
+                        key: 'customizer', 
+                        className: "fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto" 
+                    }, React.createElement('div', { className: "bg-white rounded-3xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto" }, [
+                        React.createElement('h2', { key: 'title', className: "text-2xl font-bold text-center mb-6 text-gray-800" }, '🎨 Customize Your Game'),
                         
-                        {/* Hidden file input */}
-                        <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept="image/*"
-                            onChange={handleFileInput}
-                            style={{ display: 'none' }}
-                        />
-                    </div>
-                </div>
-            );
+                        // Game Title Input
+                        React.createElement('div', { key: 'title-input', className: "mb-4" }, [
+                            React.createElement('label', { key: 'label', className: "block text-sm font-medium text-gray-700 mb-2" }, 'Game Title'),
+                            React.createElement('input', {
+                                key: 'input',
+                                type: 'text',
+                                value: gameTitle,
+                                onChange: (e) => setGameTitle(e.target.value),
+                                className: "w-full p-3 border-2 border-gray-300 rounded-xl focus:border-purple-500 focus:outline-none",
+                                placeholder: "Enter your game title"
+                            })
+                        ]),
+
+                        // Game Description Input
+                        React.createElement('div', { key: 'desc-input', className: "mb-6" }, [
+                            React.createElement('label', { key: 'label', className: "block text-sm font-medium text-gray-700 mb-2" }, 'Game Description'),
+                            React.createElement('input', {
+                                key: 'input',
+                                type: 'text',
+                                value: gameDescription,
+                                onChange: (e) => setGameDescription(e.target.value),
+                                className: "w-full p-3 border-2 border-gray-300 rounded-xl focus:border-purple-500 focus:outline-none",
+                                placeholder: "Enter your game description"
+                            })
+                        ]),
+
+                        // Categories Section
+                        React.createElement('div', { key: 'categories', className: "mb-6" }, [
+                            React.createElement('div', { key: 'header', className: "flex justify-between items-center mb-3" }, [
+                                React.createElement('label', { key: 'label', className: "block text-sm font-medium text-gray-700" }, `Categories (${customCategories.length})`),
+                                React.createElement('button', {
+                                    key: 'add',
+                                    onClick: addCustomCategory,
+                                    className: "bg-green-500 text-white p-2 rounded-full hover:bg-green-600 transition-colors"
+                                }, React.createElement(Plus))
+                            ]),
+                            React.createElement('div', { key: 'list', className: "space-y-3 max-h-60 overflow-y-auto" }, 
+                                customCategories.map((category, index) => 
+                                    React.createElement('div', { key: index, className: "flex gap-2" }, [
+                                        React.createElement('input', {
+                                            key: 'input',
+                                            type: 'text',
+                                            value: category,
+                                            onChange: (e) => updateCustomCategory(index, e.target.value),
+                                            className: "flex-1 p-3 border-2 border-gray-300 rounded-xl focus:border-purple-500 focus:outline-none",
+                                            placeholder: `Category ${index + 1}`
+                                        }),
+                                        customCategories.length > 1 && React.createElement('button', {
+                                            key: 'delete',
+                                            onClick: () => removeCustomCategory(index),
+                                            className: "bg-red-500 text-white p-3 rounded-xl hover:bg-red-600 transition-colors"
+                                        }, React.createElement(Trash2))
+                                    ])
+                                )
+                            )
+                        ]),
+
+                        // Password Input
+                        React.createElement('div', { key: 'password', className: "mb-6" }, [
+                            React.createElement('label', { key: 'label', className: "block text-sm font-medium text-gray-700 mb-2" }, 'Creator Password (for editing later)'),
+                            React.createElement('div', { key: 'wrapper', className: "relative" }, [
+                                React.createElement('input', {
+                                    key: 'input',
+                                    type: showPassword ? 'text' : 'password',
+                                    value: creatorPassword,
+                                    onChange: (e) => setCreatorPassword(e.target.value),
+                                    className: "w-full p-3 pr-12 border-2 border-gray-300 rounded-xl focus:border-purple-500 focus:outline-none",
+                                    placeholder: "Enter a password to protect your game"
+                                }),
+                                React.createElement('button', {
+                                    key: 'toggle',
+                                    type: 'button',
+                                    onClick: () => setShowPassword(!showPassword),
+                                    className: "absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                                }, showPassword ? React.createElement(EyeOff) : React.createElement(Eye))
+                            ])
+                        ]),
+
+                        // Share Link Display
+                        shareLink && React.createElement('div', { key: 'sharelink', className: "mb-6 p-4 bg-green-50 border-2 border-green-200 rounded-xl" }, [
+                            React.createElement('h3', { key: 'title', className: "font-semibold text-green-800 mb-2" }, '🎉 Your Share Link is Ready!'),
+                            React.createElement('div', { key: 'link', className: "flex gap-2" }, [
+                                React.createElement('input', { 
+                                    key: 'input',
+                                    type: 'text', 
+                                    value: shareLink, 
+                                    readOnly: true, 
+                                    className: "flex-1 p-2 bg-white border border-green-300 rounded-lg text-sm" 
+                                }),
+                                React.createElement('button', {
+                                    key: 'copy',
+                                    onClick: copyShareLink,
+                                    className: "bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors"
+                                }, React.createElement(Copy))
+                            ])
+                        ]),
+
+                        // Action Buttons
+                        React.createElement('div', { key: 'actions', className: "flex gap-3" }, [
+                            React.createElement('button', {
+                                key: 'cancel',
+                                onClick: () => setShowCustomizer(false),
+                                className: "flex-1 bg-gray-500 text-white py-3 px-4 rounded-full font-semibold hover:bg-gray-600 transition-colors"
+                            }, 'Cancel'),
+                            React.createElement('button', {
+                                key: 'apply',
+                                onClick: applyCustomization,
+                                className: "flex-1 bg-purple-500 text-white py-3 px-4 rounded-full font-semibold hover:bg-purple-600 transition-colors"
+                            }, 'Apply Changes'),
+                            React.createElement('button', {
+                                key: 'share',
+                                onClick: createShareLink,
+                                disabled: isCreatingLink,
+                                className: "flex-1 bg-blue-500 text-white py-3 px-4 rounded-full font-semibold hover:bg-blue-600 transition-colors disabled:opacity-50"
+                            }, isCreatingLink ? 'Creating...' : 'Create Share Link')
+                        ])
+                    ])),
+
+                    // Progress Bar
+                    (!cameraIndex && !previewIndex && !showNameInput && !showCustomizer) && React.createElement('div', { 
+                        key: 'progress', 
+                        className: "sticky top-0 bg-white border-b border-gray-200 px-6 py-4 z-10" 
+                    }, [
+                        React.createElement('div', { key: 'bar', className: "bg-gray-200 rounded-full h-3 overflow-hidden" },
+                            React.createElement('div', { 
+                                className: "bg-gradient-to-r from-purple-500 to-pink-500 h-full transition-all duration-500",
+                                style: { width: `${(completedCount / categories.length) * 100}%` }
+                            })
+                        ),
+                        React.createElement('p', { 
+                            key: 'text', 
+                            className: `text-center ${layoutConfig.textSize} text-gray-600 mt-2`
+                        }, 
+                            completedCount === 0 ? "Start by taking your first selfie!" :
+                            completedCount < categories.length ? "Keep going! Take more selfies and tap completed photos to view." :
+                            "Congratulations! You completed the selfie bingo!"
+                        )
+                    ]),
+
+                    // Name Input Modal
+                    showNameInput && React.createElement('div', { 
+                        key: 'nameinput', 
+                        className: "fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" 
+                    }, React.createElement('div', { className: "bg-white rounded-3xl p-6 max-w-sm w-full" }, [
+                        React.createElement('h2', { key: 'title', className: "text-xl font-bold text-center mb-4 text-gray-800" }, '📝 Who\'s in the photo?'),
+                        React.createElement('input', {
+                            key: 'input',
+                            type: 'text',
+                            value: nameInput,
+                            onChange: (e) => setNameInput(e.target.value),
+                            placeholder: "Enter their name (optional)",
+                            className: "w-full p-3 border-2 border-gray-300 rounded-xl text-center focus:border-purple-500 focus:outline-none mb-4",
+                            autoFocus: true,
+                            onKeyDown: (e) => e.key === 'Enter' ? saveName() : e.key === 'Escape' ? skipName() : null
+                        }),
+                        React.createElement('div', { key: 'buttons', className: "flex gap-3" }, [
+                            React.createElement('button', {
+                                key: 'skip',
+                                onClick: skipName,
+                                className: "flex-1 bg-gray-500 text-white py-3 px-4 rounded-full font-semibold hover:bg-gray-600 transition-colors"
+                            }, 'Skip'),
+                            React.createElement('button', {
+                                key: 'save',
+                                onClick: saveName,
+                                className: "flex-1 bg-purple-500 text-white py-3 px-4 rounded-full font-semibold hover:bg-purple-600 transition-colors"
+                            }, 'Save')
+                        ])
+                    ])),
+
+                    // Photo Preview
+                    (previewIndex !== null) && React.createElement('div', { 
+                        key: 'preview', 
+                        className: "fixed inset-0 bg-black z-50 flex flex-col",
+                        onClick: () => setPreviewIndex(null)
+                    }, [
+                        React.createElement('div', { key: 'header', className: "bg-gradient-to-r from-indigo-600 to-purple-600 p-4 text-white" }, [
+                            React.createElement('h2', { key: 'title', className: "text-lg font-semibold text-center" }, categories[previewIndex]),
+                            names[previewIndex] && React.createElement('p', { key: 'name', className: "text-center text-indigo-100 mt-1 font-medium" }, `with ${names[previewIndex]}`)
+                        ]),
+                        React.createElement('div', { key: 'image', className: "flex-1 flex items-center justify-center p-4" },
+                            React.createElement('img', {
+                                src: photos[previewIndex],
+                                alt: categories[previewIndex],
+                                className: "max-w-full max-h-full object-contain rounded-lg shadow-2xl",
+                                onClick: (e) => e.stopPropagation()
+                            })
+                        )
+                    ]),
+
+                    // Camera View
+                    (cameraIndex !== null) && React.createElement('div', { 
+                        key: 'camera', 
+                        className: "fixed inset-0 bg-black z-50 flex flex-col" 
+                    }, [
+                        React.createElement('div', { key: 'header', className: "bg-gradient-to-r from-indigo-600 to-purple-600 p-4 text-white" }, [
+                            React.createElement('h2', { key: 'title', className: "text-lg font-semibold text-center" }, categories[cameraIndex]),
+                            React.createElement('p', { key: 'subtitle', className: "text-center text-sm text-indigo-100 mt-1" }, 'Take a selfie with someone who matches this!')
+                        ]),
+                        
+                        React.createElement('div', { key: 'content', className: "flex-1 flex items-center justify-center p-4" },
+                            useFileInput ? 
+                                React.createElement('div', { className: "text-center" },
+                                    React.createElement('div', { className: "bg-white rounded-2xl p-8 max-w-sm" }, [
+                                        React.createElement(Camera, { key: 'icon' }),
+                                        React.createElement('p', { key: 'text', className: "text-gray-700 mb-4 mt-4" }, 'Choose a photo from your device'),
+                                        React.createElement('input', {
+                                            key: 'input',
+                                            ref: fileInputRef,
+                                            type: 'file',
+                                            accept: 'image/*',
+                                            onChange: handleFileInput,
+                                            style: { display: 'none' }
+                                        }),
+                                        React.createElement('div', { key: 'buttons', className: "flex gap-3" }, [
+                                            React.createElement('button', {
+                                                key: 'choose',
+                                                onClick: () => fileInputRef.current?.click(),
+                                                className: "flex-1 bg-purple-500 text-white py-3 px-4 rounded-full font-semibold hover:bg-purple-600 transition-colors"
+                                            }, 'Choose Photo'),
+                                            React.createElement('button', {
+                                                key: 'cancel',
+                                                onClick: stopCamera,
+                                                className: "flex-1 bg-gray-500 text-white py-3 px-4 rounded-full font-semibold hover:bg-gray-600 transition-colors"
+                                            }, 'Cancel')
+                                        ])
+                                    ])
+                                ) :
+                                [
+                                    React.createElement('video', {
+                                        key: 'video',
+                                        ref: videoRef,
+                                        autoPlay: true,
+                                        playsInline: true,
+                                        className: "max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+                                    }),
+                                    React.createElement('div', { key: 'controls', className: "absolute bottom-8 left-1/2 transform -translate-x-1/2 flex gap-4" }, [
+                                        React.createElement('button', {
+                                            key: 'capture',
+                                            onClick: capturePhoto,
+                                            className: "bg-white p-4 rounded-full shadow-lg hover:bg-gray-100 transition-colors"
+                                        }, React.createElement(Camera)),
+                                        React.createElement('button', {
+                                            key: 'cancel',
+                                            onClick: stopCamera,
+                                            className: "bg-red-500 text-white px-6 py-3 rounded-full font-semibold hover:bg-red-600 transition-colors"
+                                        }, 'Cancel')
+                                    ])
+                                ]
+                        )
+                    ]),
+
+                    // Bingo Grid
+                    (!cameraIndex && !previewIndex && !showNameInput && !showCustomizer) && React.createElement('div', { 
+                        key: 'grid', 
+                        className: "p-6 pb-8" 
+                    }, React.createElement('div', { className: `grid ${layoutConfig.grid} ${layoutConfig.spacing}` }, 
+                        categories.map((category, index) => 
+                            React.createElement('div', {
+                                key: index,
+                                className: `relative aspect-square border-2 rounded-xl p-3 flex flex-col items-center justify-center text-center transition-all
+                                    ${completedBoxes.has(index) ? 'border-green-500 bg-green-50 cursor-pointer hover:border-green-600' : 'border-gray-300 bg-gray-50 hover:border-purple-400 hover:bg-purple-50'}
+                                    ${screenSize === 'tiny' ? 'min-h-[120px]' : ''}`,
+                                onClick: () => completedBoxes.has(index) && setPreviewIndex(index)
+                            }, [
+                                // Photo background
+                                (completedBoxes.has(index) && photos[index]) && React.createElement('img', {
+                                    key: 'photo',
+                                    src: photos[index],
+                                    alt: category,
+                                    className: "absolute inset-0 w-full h-full object-cover rounded-xl"
+                                }),
+                                
+                                // Check mark
+                                completedBoxes.has(index) && React.createElement('div', {
+                                    key: 'check',
+                                    className: "absolute top-2 right-2 bg-green-500 rounded-full p-1"
+                                }, React.createElement(Check)),
+
+                                // Name label
+                                (completedBoxes.has(index) && names[index]) && React.createElement('div', {
+                                    key: 'name',
+                                    className: "absolute bottom-1 left-1 right-1 bg-black/70 text-white text-xs px-2 py-1 rounded text-center truncate"
+                                }, names[index]),
+
+                                // Category text
+                                React.createElement('span', {
+                                    key: 'category',
+                                    className: `${layoutConfig.textSize} font-medium z-10 ${completedBoxes.has(index) ? 'text-white bg-black/50 px-2 py-1 rounded' : 'text-gray-700'}`
+                                }, category),
+
+                                // Camera button
+                                !completedBoxes.has(index) && React.createElement('button', {
+                                    key: 'camera',
+                                    onClick: (e) => {
+                                        e.stopPropagation();
+                                        startCamera(index);
+                                    },
+                                    className: `mt-2 ${layoutConfig.buttonSize} bg-purple-500 text-white rounded-full hover:bg-purple-600 transition-colors z-10`
+                                }, React.createElement(Camera))
+                            ])
+                        )
+                    )),
+
+                    // Footer
+                    React.createElement('div', { key: 'footer', className: "bg-gray-50 px-6 py-4 border-t border-gray-200" },
+                        React.createElement('p', { className: "text-center text-xs text-gray-500" }, [
+                            'Licensed under ',
+                            React.createElement('a', {
+                                key: 'link',
+                                href: 'https://creativecommons.org/licenses/by-nc/4.0/',
+                                target: '_blank',
+                                rel: 'noopener noreferrer',
+                                className: 'text-purple-600 hover:text-purple-700 underline'
+                            }, 'Creative Commons Non-Commercial 4.0')
+                        ])
+                    ),
+
+                    // Hidden elements
+                    React.createElement('canvas', { key: 'canvas', ref: canvasRef, style: { display: 'none' } }),
+                    React.createElement('input', {
+                        key: 'fileinput',
+                        ref: fileInputRef,
+                        type: 'file',
+                        accept: 'image/*',
+                        onChange: handleFileInput,
+                        style: { display: 'none' }
+                    })
+                ])
+            ]);
         };
 
-        ReactDOM.render(<HumanBingoGame />, document.getElementById('root'));
+        ReactDOM.render(React.createElement(HumanBingoGame), document.getElementById('root'));
     </script>
 </body>
 </html>
