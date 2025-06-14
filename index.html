@@ -1,906 +1,147 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Human Bingo Selfie Game</title>
+    <title>Camera Test - Human Bingo</title>
     <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Firebase v8 -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 </head>
 <body>
     <div id="root"></div>
     <script type="text/babel">
-        // Firebase Configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyCKVkzw8bHYiaqwS6J0xrTplhnXYdEQwiQ",
-            authDomain: "human-bingo-game.firebaseapp.com",
-            projectId: "human-bingo-game",
-            storageBucket: "human-bingo-game.firebasestorage.app",
-            messagingSenderId: "133740150923",
-            appId: "1:133740150923:web:0266b47cb2cc4e0d1e548e"
-        };
-        
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
+        const { useState, useRef } = React;
 
-        const { useState, useRef, useEffect } = React;
+```
+    function CameraTest() {
+        const [showCamera, setShowCamera] = useState(false);
+        const [photo, setPhoto] = useState(null);
+        const fileInputRef = useRef(null);
 
-        function HumanBingoGame() {
-            const defaultCategories = [
-                "Nervous about the future",
-                "Nature Lover", 
-                "Thinks their future job doesn't exist yet",
-                "Secretly excited to grow older",
-                "Would choose more free time over more money",
-                "Believes our generation will do better",
-                "Has a pet",
-                "Binge watches shows",
-                "Likes to read"
-            ];
-
-            const [categories, setCategories] = useState(defaultCategories);
-            const [completedBoxes, setCompletedBoxes] = useState(new Set());
-            const [photos, setPhotos] = useState({});
-            const [names, setNames] = useState({});
-            const [cameraIndex, setCameraIndex] = useState(null);
-            const [previewIndex, setPreviewIndex] = useState(null);
-            const [showNameInput, setShowNameInput] = useState(false);
-            const [nameInput, setNameInput] = useState('');
-            const [pendingPhotoIndex, setPendingPhotoIndex] = useState(null);
-
-            // Customization states
-            const [showCustomizer, setShowCustomizer] = useState(false);
-            const [customCategories, setCustomCategories] = useState(['']);
-            const [gameTitle, setGameTitle] = useState('Human Bingo Selfie');
-            const [gameDescription, setGameDescription] = useState('Take selfies with people to complete your bingo!');
-            const [creatorPassword, setCreatorPassword] = useState('');
-            const [showPassword, setShowPassword] = useState(false);
-            const [shareLink, setShareLink] = useState('');
-            const [isCreatingLink, setIsCreatingLink] = useState(false);
-            const [gameId, setGameId] = useState(null);
-            const [isCustomGame, setIsCustomGame] = useState(false);
-            const [isEditMode, setIsEditMode] = useState(false);
-            const [showPasswordPrompt, setShowPasswordPrompt] = useState(false);
-            const [passwordInput, setPasswordInput] = useState('');
-            const [passwordError, setPasswordError] = useState('');
-
-            const videoRef = useRef(null);
-            const canvasRef = useRef(null);
-            const fileInputRef = useRef(null);
-            const [stream, setStream] = useState(null);
-            const [useFileInput, setUseFileInput] = useState(false);
-            const [cameraFacing, setCameraFacing] = useState('user'); // 'user' for front, 'environment' for back
-
-            const completedCount = completedBoxes.size;
-
-            // Load game on component mount
-            useEffect(() => {
-                const loadGameFromURL = async () => {
-                    try {
-                        const urlParams = new URLSearchParams(window.location.search);
-                        const gameIdParam = urlParams.get('game');
-                        
-                        if (gameIdParam) {
-                            const gameDoc = await db.collection('games').doc(gameIdParam).get();
-                            if (gameDoc.exists) {
-                                const gameData = gameDoc.data();
-                                setGameId(gameIdParam);
-                                setIsCustomGame(true);
-                                setGameTitle(gameData.title || 'Custom Human Bingo');
-                                setGameDescription(gameData.description || 'Custom selfie bingo game!');
-                                setCategories(gameData.categories || defaultCategories);
-                                
-                                loadSavedProgress(gameIdParam);
-                            }
-                        } else {
-                            loadSavedProgress('default');
-                        }
-                    } catch (error) {
-                        console.log('Could not load custom game:', error);
-                        loadSavedProgress('default');
-                    }
+        const handleFileChange = (event) => {
+            const file = event.target.files[0];
+            console.log('File selected:', file);
+            
+            if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    console.log('Photo loaded');
+                    setPhoto(e.target.result);
+                    setShowCamera(false);
                 };
+                reader.readAsDataURL(file);
+            } else {
+                console.log('No valid image file selected');
+            }
+            
+            // Clear the input
+            event.target.value = '';
+        };
 
-                loadGameFromURL();
-            }, []);
-
-            // Save progress automatically
-            useEffect(() => {
-                saveProgress();
-            }, [completedBoxes, photos, names]);
-
-            const saveProgress = () => {
-                try {
-                    const currentGameId = gameId || 'default';
-                    const progressData = {
-                        completedBoxes: Array.from(completedBoxes),
-                        photos: photos,
-                        names: names,
-                        timestamp: Date.now()
-                    };
-                    localStorage.setItem(`humanBingo_${currentGameId}`, JSON.stringify(progressData));
-                } catch (error) {
-                    console.log('Could not save progress:', error);
-                }
-            };
-
-            const loadSavedProgress = (currentGameId) => {
-                try {
-                    const saved = localStorage.getItem(`humanBingo_${currentGameId}`);
-                    if (saved) {
-                        const progressData = JSON.parse(saved);
-                        if (Date.now() - progressData.timestamp < 24 * 60 * 60 * 1000) {
-                            setCompletedBoxes(new Set(progressData.completedBoxes || []));
-                            setPhotos(progressData.photos || {});
-                            setNames(progressData.names || {});
-                        }
-                    }
-                } catch (error) {
-                    console.log('Could not load saved progress:', error);
-                }
-            };
-
-            const startCamera = async (index) => {
-                setCameraIndex(index);
-                try {
-                    const mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-                    setStream(mediaStream);
-                    if (videoRef.current) videoRef.current.srcObject = mediaStream;
-                    setUseFileInput(false);
-                } catch (error) {
-                    setUseFileInput(true);
-                }
-            };
-
-            const stopCamera = () => {
-                if (stream) {
-                    stream.getTracks().forEach(track => track.stop());
-                    setStream(null);
-                }
-                setCameraIndex(null);
-                setUseFileInput(false);
-            };
-
-            const capturePhoto = () => {
-                if (videoRef.current && canvasRef.current) {
-                    const canvas = canvasRef.current;
-                    const video = videoRef.current;
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-purple-400 via-pink-500 to-red-500 p-4">
+                <div className="max-w-md mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden p-6">
+                    <h1 className="text-2xl font-bold text-center mb-6">Camera Test</h1>
                     
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(video, 0, 0);
-                    
-                    const photoDataUrl = canvas.toDataURL('image/jpeg', 0.8);
-                    setPhotos(prev => ({ ...prev, [cameraIndex]: photoDataUrl }));
-                    setPendingPhotoIndex(cameraIndex);
-                    setShowNameInput(true);
-                    stopCamera();
-                }
-            };
+                    {!showCamera && !photo && (
+                        <button
+                            onClick={() => setShowCamera(true)}
+                            className="w-full bg-purple-500 text-white py-3 px-4 rounded-full font-semibold hover:bg-purple-600 transition-colors"
+                        >
+                            📸 Test Camera
+                        </button>
+                    )}
 
-            const handleFileInput = (event) => {
-                const file = event.target.files[0];
-                if (file && file.type.startsWith('image/')) {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        setPhotos(prev => ({ ...prev, [cameraIndex]: e.target.result }));
-                        setPendingPhotoIndex(cameraIndex);
-                        setShowNameInput(true);
-                        setCameraIndex(null);
-                        setUseFileInput(false);
-                    };
-                    reader.readAsDataURL(file);
-                }
-                event.target.value = '';
-            };
-
-            const saveName = () => {
-                if (pendingPhotoIndex !== null) {
-                    setNames(prev => ({ ...prev, [pendingPhotoIndex]: nameInput.trim() }));
-                    setCompletedBoxes(prev => new Set([...prev, pendingPhotoIndex]));
-                    setNameInput('');
-                    setShowNameInput(false);
-                    setPendingPhotoIndex(null);
-                }
-            };
-
-            const skipName = () => {
-                if (pendingPhotoIndex !== null) {
-                    setCompletedBoxes(prev => new Set([...prev, pendingPhotoIndex]));
-                    setNameInput('');
-                    setShowNameInput(false);
-                    setPendingPhotoIndex(null);
-                }
-            };
-
-            const resetGame = () => {
-                setCompletedBoxes(new Set());
-                setPhotos({});
-                setNames({});
-                setPreviewIndex(null);
-                setShowNameInput(false);
-                setNameInput('');
-                setPendingPhotoIndex(null);
-                stopCamera();
-                
-                try {
-                    const currentGameId = gameId || 'default';
-                    localStorage.removeItem(`humanBingo_${currentGameId}`);
-                } catch (error) {
-                    console.log('Could not clear saved progress:', error);
-                }
-            };
-
-            const shareCurrentGame = () => {
-                const currentUrl = window.location.href;
-                navigator.clipboard.writeText(currentUrl);
-                alert('Game link copied to clipboard!');
-            };
-
-            const copyCurrentGameLink = () => {
-                const currentUrl = window.location.href;
-                navigator.clipboard.writeText(currentUrl);
-                alert('Game link copied to clipboard!');
-            };
-
-            const copyShareLink = () => {
-                navigator.clipboard.writeText(shareLink);
-                alert('Share link copied to clipboard!');
-            };
-
-            // Edit mode functions
-            const promptForPassword = () => {
-                if (!isCustomGame || !gameId) {
-                    alert('This is not a custom game that can be edited.');
-                    return;
-                }
-                setPasswordInput('');
-                setPasswordError('');
-                setShowPasswordPrompt(true);
-            };
-
-            const verifyPassword = async () => {
-                if (!passwordInput.trim()) {
-                    setPasswordError('Please enter a password.');
-                    return;
-                }
-
-                try {
-                    const gameDoc = await db.collection('games').doc(gameId).get();
-                    if (gameDoc.exists) {
-                        const gameData = gameDoc.data();
-                        if (gameData.password === passwordInput.trim()) {
-                            setIsEditMode(true);
-                            setShowPasswordPrompt(false);
-                            setCreatorPassword(passwordInput.trim());
+                    {showCamera && (
+                        <div className="text-center space-y-4">
+                            <h2 className="text-lg font-semibold">Choose Photo Method</h2>
                             
-                            setGameTitle(gameData.title || 'Custom Human Bingo');
-                            setGameDescription(gameData.description || 'Custom selfie bingo game!');
-                            setCustomCategories(gameData.categories || categories);
-                            
-                            openCustomizer();
-                        } else {
-                            setPasswordError('Incorrect password. Please try again.');
-                        }
-                    } else {
-                        setPasswordError('Game not found.');
-                    }
-                } catch (error) {
-                    setPasswordError('Error verifying password. Please try again.');
-                }
-            };
+                            {/* Method 1: Direct file input with capture */}
+                            <input
+                                type="file"
+                                accept="image/*"
+                                capture="environment"
+                                onChange={handleFileChange}
+                                className="hidden"
+                                id="camera-capture"
+                            />
+                            <label
+                                htmlFor="camera-capture"
+                                className="block w-full bg-purple-500 text-white py-3 px-4 rounded-full font-semibold hover:bg-purple-600 transition-colors cursor-pointer"
+                            >
+                                📷 Take Photo (Method 1)
+                            </label>
 
-            // Customization functions
-            const openCustomizer = () => {
-                setCustomCategories([...categories]);
-                setShowCustomizer(true);
-            };
+                            {/* Method 2: Hidden input with ref */}
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/*"
+                                capture="environment"
+                                onChange={handleFileChange}
+                                style={{ display: 'none' }}
+                            />
+                            <button
+                                onClick={() => fileInputRef.current?.click()}
+                                className="w-full bg-blue-500 text-white py-3 px-4 rounded-full font-semibold hover:bg-blue-600 transition-colors"
+                            >
+                                📷 Take Photo (Method 2)
+                            </button>
 
-            const addCustomCategory = () => {
-                setCustomCategories([...customCategories, '']);
-            };
+                            {/* Method 3: Gallery only */}
+                            <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleFileChange}
+                                className="hidden"
+                                id="gallery-select"
+                            />
+                            <label
+                                htmlFor="gallery-select"
+                                className="block w-full bg-green-500 text-white py-3 px-4 rounded-full font-semibold hover:bg-green-600 transition-colors cursor-pointer"
+                            >
+                                📁 Choose from Gallery
+                            </label>
 
-            const removeCustomCategory = (index) => {
-                if (customCategories.length > 1) {
-                    setCustomCategories(customCategories.filter((_, i) => i !== index));
-                }
-            };
-
-            const updateCustomCategory = (index, value) => {
-                const newCategories = [...customCategories];
-                newCategories[index] = value;
-                setCustomCategories(newCategories);
-            };
-
-            const saveGame = async () => {
-                const validCategories = customCategories.filter(cat => cat.trim() !== '');
-                if (validCategories.length < 4) {
-                    alert('Please add at least 4 categories for your game.');
-                    return;
-                }
-
-                if (!creatorPassword.trim()) {
-                    alert('Please enter a password to secure your custom game.');
-                    return;
-                }
-
-                setIsCreatingLink(true);
-                
-                try {
-                    setCategories(validCategories);
-                    setCompletedBoxes(new Set());
-                    setPhotos({});
-                    setNames({});
-
-                    if (gameId && isEditMode) {
-                        const gameData = {
-                            title: gameTitle,
-                            description: gameDescription,
-                            categories: validCategories,
-                            password: creatorPassword,
-                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                        };
-
-                        await db.collection('games').doc(gameId).update(gameData);
-                        const currentShareLink = `${window.location.origin}${window.location.pathname}?game=${gameId}`;
-                        setShareLink(currentShareLink);
-                        setShowCustomizer(false);
-                        setIsEditMode(false);
-                    } else {
-                        const gameData = {
-                            title: gameTitle,
-                            description: gameDescription,
-                            categories: validCategories,
-                            password: creatorPassword,
-                            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-                        };
-
-                        const docRef = await db.collection('games').add(gameData);
-                        const newShareLink = `${window.location.origin}${window.location.pathname}?game=${docRef.id}`;
-                        setShareLink(newShareLink);
-                        setGameId(docRef.id);
-                        setIsCustomGame(true);
-                        setShowCustomizer(false);
-                        
-                        window.history.pushState({}, '', newShareLink);
-                    }
-                } catch (error) {
-                    alert('Failed to save game: ' + error.message);
-                } finally {
-                    setIsCreatingLink(false);
-                }
-            };
-
-            return (
-                <div className="min-h-screen bg-gradient-to-br from-purple-400 via-pink-500 to-red-500 p-4 pb-8">
-                    <div className="max-w-md mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden">
-                        
-                        {/* Header */}
-                        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 text-white">
-                            <h1 className="text-2xl font-bold text-center mb-2">📸 {gameTitle}</h1>
-                            <p className="text-center text-indigo-100 text-sm">{gameDescription}</p>
-                            <div className="mt-4 flex justify-between items-center">
-                                <span className="text-sm bg-white/20 px-3 py-1 rounded-full">
-                                    {completedCount}/{categories.length} completed
-                                </span>
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={isCustomGame ? promptForPassword : openCustomizer}
-                                        title={isCustomGame ? "Edit this custom game" : "Customize your game"}
-                                        className="p-2 bg-green-500/20 border border-green-300/30 rounded-full hover:bg-green-500/30 transition-colors"
-                                    >
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                                        </svg>
-                                    </button>
-                                    <button
-                                        onClick={resetGame}
-                                        className="p-2 bg-white/20 rounded-full hover:bg-white/30 transition-colors"
-                                    >
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                                            <path d="M3 3v5h5"/>
-                                        </svg>
-                                    </button>
-                                </div>
-                            </div>
+                            <button
+                                onClick={() => setShowCamera(false)}
+                                className="w-full bg-gray-500 text-white py-3 px-4 rounded-full font-semibold hover:bg-gray-600 transition-colors"
+                            >
+                                Cancel
+                            </button>
                         </div>
+                    )}
 
-                        {/* Share Link Display - Center Screen Modal */}
-                        {shareLink && (
-                            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                                <div className="bg-white rounded-3xl p-8 max-w-lg w-full shadow-2xl">
-                                    <div className="text-center">
-                                        <div className="text-6xl mb-4">🎉</div>
-                                        <h3 className="font-bold text-gray-800 mb-4 text-2xl">
-                                            Your Game is Ready!
-                                        </h3>
-                                        <div className="mb-6 p-4 bg-gray-50 rounded-xl border-2 border-gray-200">
-                                            <div className="flex gap-2 mb-3">
-                                                <input 
-                                                    type="text" 
-                                                    value={shareLink} 
-                                                    readOnly 
-                                                    className="flex-1 p-3 bg-white border-2 border-gray-300 rounded-lg text-sm font-mono" 
-                                                />
-                                                <button
-                                                    onClick={copyShareLink}
-                                                    className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors font-semibold"
-                                                >
-                                                    📋 Copy
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <div className="bg-green-50 p-4 rounded-xl border border-green-200 mb-6 text-left">
-                                            <h4 className="font-bold text-green-800 mb-2">📋 Next Steps:</h4>
-                                            <ol className="text-sm text-green-700 space-y-1.5">
-                                                <li><strong>1.</strong> Share this link with anyone for them to participate!</li>
-                                                <li><strong>2.</strong> Use this link to retrieve/edit your customized game in the future</li>
-                                                <li><strong>3.</strong> This link will be active for 7 days. Happy gaming!</li>
-                                            </ol>
-                                        </div>
-                                        <button
-                                            onClick={() => setShareLink('')}
-                                            className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 px-6 rounded-full font-semibold hover:from-purple-600 hover:to-pink-600 transition-all"
-                                        >
-                                            Start Playing!
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Password Prompt Modal */}
-                        {showPasswordPrompt && (
-                            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                                <div className="bg-white rounded-3xl p-6 max-w-sm w-full">
-                                    <h2 className="text-xl font-bold text-center mb-4 text-gray-800">🔒 Enter Creator Password</h2>
-                                    <p className="text-center text-sm text-gray-600 mb-4">Enter the password you used when creating this game to edit it.</p>
-                                    <input
-                                        type="password"
-                                        value={passwordInput}
-                                        onChange={(e) => {
-                                            setPasswordInput(e.target.value);
-                                            setPasswordError('');
-                                        }}
-                                        placeholder="Enter creator password"
-                                        className={`w-full p-3 border-2 rounded-xl text-center focus:outline-none mb-2 ${passwordError ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-purple-500'}`}
-                                        autoFocus={true}
-                                        onKeyDown={(e) => e.key === 'Enter' ? verifyPassword() : e.key === 'Escape' ? setShowPasswordPrompt(false) : null}
-                                    />
-                                    {passwordError && <p className="text-red-500 text-sm text-center mb-4">{passwordError}</p>}
-                                    <div className="flex gap-3">
-                                        <button
-                                            onClick={() => setShowPasswordPrompt(false)}
-                                            className="flex-1 bg-gray-500 text-white py-3 px-4 rounded-full font-semibold hover:bg-gray-600 transition-colors"
-                                        >
-                                            Cancel
-                                        </button>
-                                        <button
-                                            onClick={verifyPassword}
-                                            className="flex-1 bg-blue-500 text-white py-3 px-4 rounded-full font-semibold hover:bg-blue-600 transition-colors"
-                                        >
-                                            Verify
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Customizer Modal */}
-                        {showCustomizer && (
-                            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
-                                <div className="bg-white rounded-3xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                                    <h2 className="text-2xl font-bold text-center mb-6 text-gray-800">
-                                        {isEditMode ? '✏️ Edit Your Game' : '🎨 Customize Your Game'}
-                                    </h2>
-                                    
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Game Title</label>
-                                        <input
-                                            type="text"
-                                            value={gameTitle}
-                                            onChange={(e) => setGameTitle(e.target.value)}
-                                            className="w-full p-3 border-2 border-gray-300 rounded-xl focus:border-purple-500 focus:outline-none"
-                                            placeholder="Enter your game title"
-                                        />
-                                    </div>
-
-                                    <div className="mb-6">
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Game Description</label>
-                                        <input
-                                            type="text"
-                                            value={gameDescription}
-                                            onChange={(e) => setGameDescription(e.target.value)}
-                                            className="w-full p-3 border-2 border-gray-300 rounded-xl focus:border-purple-500 focus:outline-none"
-                                            placeholder="Enter your game description"
-                                        />
-                                    </div>
-
-                                    <div className="mb-6">
-                                        <div className="flex justify-between items-center mb-3">
-                                            <label className="block text-sm font-medium text-gray-700">Categories ({customCategories.length})</label>
-                                            <button
-                                                onClick={addCustomCategory}
-                                                className="bg-green-500 text-white p-2 rounded-full hover:bg-green-600 transition-colors"
-                                            >
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                    <path d="M5 12h14"/>
-                                                    <path d="M12 5v14"/>
-                                                </svg>
-                                            </button>
-                                        </div>
-                                        <div className="space-y-3 max-h-60 overflow-y-auto">
-                                            {customCategories.map((category, index) => (
-                                                <div key={index} className="flex gap-2">
-                                                    <input
-                                                        type="text"
-                                                        value={category}
-                                                        onChange={(e) => updateCustomCategory(index, e.target.value)}
-                                                        className="flex-1 p-3 border-2 border-gray-300 rounded-xl focus:border-purple-500 focus:outline-none"
-                                                        placeholder={`Category ${index + 1}`}
-                                                    />
-                                                    {customCategories.length > 1 && (
-                                                        <button
-                                                            onClick={() => removeCustomCategory(index)}
-                                                            className="bg-red-500 text-white p-3 rounded-xl hover:bg-red-600 transition-colors"
-                                                        >
-                                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                                <path d="M3 6h18"/>
-                                                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
-                                                                <path d="M8 6V4c0-1 1-2 2-2h4c-1 0 2 1 2 2v2"/>
-                                                            </svg>
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    <div className="mb-6">
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Creator Password (for editing later)</label>
-                                        <div className="relative">
-                                            <input
-                                                type={showPassword ? 'text' : 'password'}
-                                                value={creatorPassword}
-                                                onChange={(e) => setCreatorPassword(e.target.value)}
-                                                className="w-full p-3 pr-12 border-2 border-gray-300 rounded-xl focus:border-purple-500 focus:outline-none"
-                                                placeholder="Enter a password to protect your game"
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowPassword(!showPassword)}
-                                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                                            >
-                                                {showPassword ? (
-                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                        <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
-                                                        <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>
-                                                        <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/>
-                                                        <line x1="2" x2="22" y1="2" y2="22"/>
-                                                    </svg>
-                                                ) : (
-                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
-                                                        <circle cx="12" cy="12" r="3"/>
-                                                    </svg>
-                                                )}
-                                            </button>
-                                        </div>
-                                        <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                                            <div className="flex items-start gap-2">
-                                                <div className="text-amber-600 mt-0.5">⚠️</div>
-                                                <div className="text-sm text-amber-800">
-                                                    <p className="font-medium mb-1">Important Notes:</p>
-                                                    <ul className="space-y-1 text-xs">
-                                                        <li>• Your custom game will be <strong>accessible for 7 days only</strong></li>
-                                                        <li>• You need this password to edit your game later</li>
-                                                        <li>• Save your password - it cannot be recovered</li>
-                                                        <li>• Share links will stop working after 7 days</li>
-                                                    </ul>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex gap-3">
-                                        <button
-                                            onClick={() => {
-                                                setShowCustomizer(false);
-                                                setIsEditMode(false);
-                                            }}
-                                            className="flex-1 bg-gray-500 text-white py-3 px-4 rounded-full font-semibold hover:bg-gray-600 transition-colors"
-                                        >
-                                            Cancel
-                                        </button>
-                                        <button
-                                            onClick={saveGame}
-                                            disabled={isCreatingLink}
-                                            className="flex-2 bg-blue-500 text-white py-3 px-6 rounded-full font-semibold hover:bg-blue-600 transition-colors disabled:opacity-50"
-                                        >
-                                            {isCreatingLink ? 'Saving...' : 'Save Game'}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Progress Bar */}
-                        {(!cameraIndex && !previewIndex && !showNameInput && !showCustomizer) && (
-                            <div className="bg-white border-b border-gray-200 px-6 py-4">
-                                <div className="bg-gray-200 rounded-full h-3 overflow-hidden">
-                                    <div 
-                                        className="bg-gradient-to-r from-purple-500 to-pink-500 h-full transition-all duration-500"
-                                        style={{ width: `${(completedCount / categories.length) * 100}%` }}
-                                    />
-                                </div>
-                                <p className="text-center text-xs text-gray-600 mt-2">
-                                    {completedCount === 0 ? "Start by taking your first selfie!" :
-                                     completedCount < categories.length ? "Keep going! Take more selfies and tap completed photos to view." :
-                                     "Congratulations! You completed the selfie bingo!"}
-                                </p>
-                            </div>
-                        )}
-
-                        {/* Name Input Modal */}
-                        {showNameInput && (
-                            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                                <div className="bg-white rounded-3xl p-6 max-w-sm w-full">
-                                    <h2 className="text-xl font-bold text-center mb-4 text-gray-800">📝 Who's in the photo?</h2>
-                                    <input
-                                        type="text"
-                                        value={nameInput}
-                                        onChange={(e) => setNameInput(e.target.value)}
-                                        placeholder="Enter their name (optional)"
-                                        className="w-full p-3 border-2 border-gray-300 rounded-xl text-center focus:border-purple-500 focus:outline-none mb-4"
-                                        autoFocus={true}
-                                        onKeyDown={(e) => e.key === 'Enter' ? saveName() : e.key === 'Escape' ? skipName() : null}
-                                    />
-                                    <div className="flex gap-3">
-                                        <button
-                                            onClick={skipName}
-                                            className="flex-1 bg-gray-500 text-white py-3 px-4 rounded-full font-semibold hover:bg-gray-600 transition-colors"
-                                        >
-                                            Skip
-                                        </button>
-                                        <button
-                                            onClick={saveName}
-                                            className="flex-1 bg-purple-500 text-white py-3 px-4 rounded-full font-semibold hover:bg-purple-600 transition-colors"
-                                        >
-                                            Save
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Photo Preview */}
-                        {(previewIndex !== null) && (
-                            <div className="fixed inset-0 bg-black z-50 flex flex-col" onClick={() => setPreviewIndex(null)}>
-                                <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-4 text-white">
-                                    <h2 className="text-lg font-semibold text-center">{categories[previewIndex]}</h2>
-                                    {names[previewIndex] && <p className="text-center text-indigo-100 mt-1 font-medium">with {names[previewIndex]}</p>}
-                                </div>
-                                <div className="flex-1 flex items-center justify-center p-4">
-                                    <img
-                                        src={photos[previewIndex]}
-                                        alt={categories[previewIndex]}
-                                        className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
-                                        onClick={(e) => e.stopPropagation()}
-                                    />
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Camera View */}
-                        {(cameraIndex !== null) && (
-                            <div className="fixed inset-0 bg-black z-50 flex flex-col">
-                                <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-4 text-white">
-                                    <h2 className="text-lg font-semibold text-center">{categories[cameraIndex]}</h2>
-                                    <p className="text-center text-sm text-indigo-100 mt-1">Take a selfie with someone who matches this!</p>
-                                </div>
-                                
-                                <div className="flex-1 flex items-center justify-center p-4">
-                                    {useFileInput ? (
-                                        <div className="text-center">
-                                            <div className="bg-white rounded-2xl p-8 max-w-sm">
-                                                <div className="text-6xl mb-4">📸</div>
-                                                <p className="text-gray-700 mb-4">Choose how to add your photo</p>
-                                                <div className="space-y-3">
-                                                    <input
-                                                        ref={fileInputRef}
-                                                        type="file"
-                                                        accept="image/*"
-                                                        capture="environment"
-                                                        onChange={handleFileInput}
-                                                        style={{ display: 'none' }}
-                                                    />
-                                                    <button
-                                                        onClick={() => fileInputRef.current?.click()}
-                                                        className="w-full bg-purple-500 text-white py-3 px-4 rounded-full font-semibold hover:bg-purple-600 transition-colors"
-                                                    >
-                                                        📸 Take Photo
-                                                    </button>
-                                                    <button
-                                                        onClick={openPhotoLibrary}
-                                                        className="w-full bg-blue-500 text-white py-3 px-4 rounded-full font-semibold hover:bg-blue-600 transition-colors"
-                                                    >
-                                                        📁 Choose from Library
-                                                    </button>
-                                                    <button
-                                                        onClick={stopCamera}
-                                                        className="w-full bg-gray-500 text-white py-3 px-4 rounded-full font-semibold hover:bg-gray-600 transition-colors"
-                                                    >
-                                                        Cancel
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <>
-                                            <video
-                                                ref={videoRef}
-                                                autoPlay
-                                                playsInline
-                                                className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
-                                            />
-                                            <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex gap-4">
-                                                <button
-                                                    onClick={switchCamera}
-                                                    className="bg-gray-700 text-white p-3 rounded-full shadow-lg hover:bg-gray-800 transition-colors"
-                                                    title="Switch camera"
-                                                >
-                                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                        <path d="M17 8l4 4-4 4"/>
-                                                        <path d="M3 12h18"/>
-                                                        <path d="M7 16l-4-4 4-4"/>
-                                                    </svg>
-                                                </button>
-                                                <button
-                                                    onClick={capturePhoto}
-                                                    className="bg-white p-4 rounded-full shadow-lg hover:bg-gray-100 transition-colors"
-                                                >
-                                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
-                                                        <path d="M12 15.5c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3z"/>
-                                                        <path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/>
-                                                    </svg>
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        const input = document.createElement('input');
-                                                        input.type = 'file';
-                                                        input.accept = 'image/*';
-                                                        input.multiple = false;
-                                                        input.onchange = handleFileInput;
-                                                        input.click();
-                                                    }}
-                                                    className="bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 transition-colors"
-                                                    title="Choose from library"
-                                                >
-                                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                                                        <circle cx="9" cy="9" r="2"/>
-                                                        <path d="M21 15l-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
-                                                    </svg>
-                                                </button>
-                                                <button
-                                                    onClick={stopCamera}
-                                                    className="bg-red-500 text-white px-4 py-3 rounded-full font-semibold hover:bg-red-600 transition-colors"
-                                                >
-                                                    Cancel
-                                                </button>
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Share Button Above Bingo Grid */}
-                        {(!cameraIndex && !previewIndex && !showNameInput && !showCustomizer) && (
-                            <div className="px-6 pb-4">
-                                <button
-                                    onClick={shareCurrentGame}
-                                    className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-3 px-4 rounded-full font-semibold hover:from-blue-600 hover:to-purple-600 transition-all shadow-lg flex items-center justify-center gap-2"
-                                >
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
-                                        <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
-                                    </svg>
-                                    Copy Game Link
-                                </button>
-                            </div>
-                        )}
-
-                        {/* Bingo Grid */}
-                        {(!cameraIndex && !previewIndex && !showNameInput && !showCustomizer) && (
-                            <div className="p-6 pb-8">
-                                <div className="grid grid-cols-3 gap-3">
-                                    {categories.map((category, index) => (
-                                        <div
-                                            key={index}
-                                            className={`relative border-2 rounded-xl p-3 flex flex-col justify-between text-center transition-all min-h-[120px]
-                                                ${completedBoxes.has(index) ? 'border-green-500 bg-green-50 cursor-pointer hover:border-green-600' : 'border-gray-300 bg-gray-50 hover:border-purple-400 hover:bg-purple-50'}`}
-                                            onClick={() => completedBoxes.has(index) && setPreviewIndex(index)}
-                                        >
-                                            {/* Photo background */}
-                                            {(completedBoxes.has(index) && photos[index]) && (
-                                                <img
-                                                    src={photos[index]}
-                                                    alt={category}
-                                                    className="absolute inset-0 w-full h-full object-cover rounded-xl"
-                                                />
-                                            )}
-                                            
-                                            {/* Check mark */}
-                                            {completedBoxes.has(index) && (
-                                                <div className="absolute top-2 right-2 bg-green-500 rounded-full p-1 text-white text-xs z-10">
-                                                    ✓
-                                                </div>
-                                            )}
-
-                                            {/* Name label */}
-                                            {(completedBoxes.has(index) && names[index]) && (
-                                                <div className="absolute bottom-1 left-1 right-1 bg-black/70 text-white text-xs px-2 py-1 rounded text-center truncate z-10">
-                                                    {names[index]}
-                                                </div>
-                                            )}
-
-                                            {/* Category text - top area */}
-                                            <div className="flex-1 flex items-center justify-center">
-                                                <span className={`text-xs font-medium z-10 ${completedBoxes.has(index) ? 'text-white bg-black/50 px-2 py-1 rounded' : 'text-gray-700'}`}>
-                                                    {category}
-                                                </span>
-                                            </div>
-
-                                            {/* Camera button - always at bottom */}
-                                            {!completedBoxes.has(index) && (
-                                                <div className="flex justify-center mt-2">
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            startCamera(index);
-                                                        }}
-                                                        className="p-2 bg-purple-500 text-white rounded-full hover:bg-purple-600 transition-colors z-10"
-                                                    >
-                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                                                            <path d="M12 15.5c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3z"/>
-                                                            <path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/>
-                                                        </svg>
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Hidden elements */}
-                        <canvas ref={canvasRef} style={{ display: 'none' }} />
-                        <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept="image/*"
-                            onChange={handleFileInput}
-                            style={{ display: 'none' }}
-                        />
-                    </div>
+                    {photo && (
+                        <div className="text-center space-y-4">
+                            <h2 className="text-lg font-semibold">Photo Captured!</h2>
+                            <img 
+                                src={photo} 
+                                alt="Captured" 
+                                className="w-full max-w-sm mx-auto rounded-lg shadow-lg"
+                            />
+                            <button
+                                onClick={() => {
+                                    setPhoto(null);
+                                    setShowCamera(false);
+                                }}
+                                className="w-full bg-purple-500 text-white py-3 px-4 rounded-full font-semibold hover:bg-purple-600 transition-colors"
+                            >
+                                Take Another Photo
+                            </button>
+                        </div>
+                    )}
                 </div>
-            );
-        }
+            </div>
+        );
+    }
 
-        ReactDOM.render(<HumanBingoGame />, document.getElementById('root'));
-    </script>
+    ReactDOM.render(<CameraTest />, document.getElementById('root'));
+</script>
+```
+
 </body>
 </html>
