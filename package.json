@@ -1,0 +1,9 @@
+{
+  "name": "human-bingo-game",
+  "version": "1.0.0",
+  "description": "A customizable selfie bingo game",
+  "main": "index.html",
+  "dependencies": {
+    "firebase": "^9.0.0"
+  }
+}
