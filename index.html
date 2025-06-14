@@ -169,6 +169,12 @@
                 }
             };
 
+            const copyCurrentGameLink = () => {
+                const currentUrl = window.location.href;
+                navigator.clipboard.writeText(currentUrl);
+                alert('Game link copied to clipboard!');
+            };
+
             const startCamera = async (index) => {
                 setCameraIndex(index);
                 try {
@@ -444,9 +450,8 @@
                         await db.collection('games').doc(gameId).update(gameData);
                         const currentShareLink = `${window.location.origin}${window.location.pathname}?game=${gameId}`;
                         setShareLink(currentShareLink);
-                        
-                        // Navigate to the updated game
-                        window.location.href = currentShareLink;
+                        setShowCustomizer(false);
+                        setIsEditMode(false);
                     } else {
                         // Create new game
                         const gameData = {
@@ -462,9 +467,11 @@
                         const newShareLink = `${window.location.origin}${window.location.pathname}?game=${docRef.id}`;
                         setShareLink(newShareLink);
                         setGameId(docRef.id);
+                        setIsCustomGame(true);
+                        setShowCustomizer(false);
                         
-                        // Navigate to the new game
-                        window.location.href = newShareLink;
+                        // Update the URL without refreshing
+                        window.history.pushState({}, '', newShareLink);
                     }
                 } catch (error) {
                     console.error('Error saving game:', error);
@@ -487,6 +494,17 @@
                                     {completedCount}/{categories.length} completed
                                 </span>
                                 <div className="flex gap-2">
+                                    <button
+                                        onClick={copyCurrentGameLink}
+                                        className="p-2 bg-yellow-500/20 border border-yellow-300/30 rounded-full hover:bg-yellow-500/30 transition-colors"
+                                        title="Copy game link"
+                                    >
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                                            <polyline points="16,6 12,2 8,6"/>
+                                            <line x1="12" y1="2" x2="12" y2="15"/>
+                                        </svg>
+                                    </button>
                                     <button
                                         onClick={openCustomizer}
                                         className="px-3 py-1 bg-blue-500/20 border border-blue-300/30 rounded-full hover:bg-blue-500/30 transition-colors text-sm text-white"
@@ -554,6 +572,168 @@
                                 </div>
                             </div>
                         )}
+
+                        {/* Share Link Display - Center Screen Modal */}
+                        {shareLink && (
+                            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                                <div className="bg-white rounded-3xl p-8 max-w-lg w-full shadow-2xl">
+                                    <div className="text-center">
+                                        <div className="text-6xl mb-4">🎉</div>
+                                        <h3 className="font-bold text-gray-800 mb-4 text-2xl">
+                                            Your Game is Ready!
+                                        </h3>
+                                        <div className="mb-6 p-4 bg-gray-50 rounded-xl border-2 border-gray-200">
+                                            <div className="flex gap-2 mb-3">
+                                                <input 
+                                                    type="text" 
+                                                    value={shareLink} 
+                                                    readOnly 
+                                                    className="flex-1 p-3 bg-white border-2 border-gray-300 rounded-lg text-sm font-mono" 
+                                                />
+                                                <button
+                                                    onClick={copyShareLink}
+                                                    className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors font-semibold"
+                                                >
+                                                    📋 Copy
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div className="bg-green-50 p-4 rounded-xl border border-green-200 mb-6 text-left">
+                                            <h4 className="font-bold text-green-800 mb-2">📋 Next Steps:</h4>
+                                            <ol className="text-sm text-green-700 space-y-1.5">
+                                                <li><strong>1.</strong> Share this link with anyone for them to participate!</li>
+                                                <li><strong>2.</strong> Use this link to retrieve/edit your customized game in the future</li>
+                                                <li><strong>3.</strong> This link will be active for 7 days. Happy gaming!</li>
+                                            </ol>
+                                        </div>
+                                        <button
+                                            onClick={() => setShareLink('')}
+                                            className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 px-6 rounded-full font-semibold hover:from-purple-600 hover:to-pink-600 transition-all"
+                                        >
+                                            Start Playing!
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                        {showCustomizer && (
+                            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+                                <div className="bg-white rounded-3xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                                    <h2 className="text-2xl font-bold text-center mb-6 text-gray-800">
+                                        {isEditMode ? '✏️ Edit Your Game' : '🎨 Customize Your Game'}
+                                    </h2>
+                                    
+                                    {/* Game Title Input */}
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Game Title</label>
+                                        <input
+                                            type="text"
+                                            value={gameTitle}
+                                            onChange={(e) => setGameTitle(e.target.value)}
+                                            className="w-full p-3 border-2 border-gray-300 rounded-xl focus:border-purple-500 focus:outline-none"
+                                            placeholder="Enter your game title"
+                                        />
+                                    </div>
+
+                                    {/* Game Description Input */}
+                                    <div className="mb-6">
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Game Description</label>
+                                        <input
+                                            type="text"
+                                            value={gameDescription}
+                                            onChange={(e) => setGameDescription(e.target.value)}
+                                            className="w-full p-3 border-2 border-gray-300 rounded-xl focus:border-purple-500 focus:outline-none"
+                                            placeholder="Enter your game description"
+                                        />
+                                    </div>
+
+                                    {/* Categories Section */}
+                                    <div className="mb-6">
+                                        <div className="flex justify-between items-center mb-3">
+                                            <label className="block text-sm font-medium text-gray-700">Categories ({customCategories.length})</label>
+                                            <button
+                                                onClick={addCustomCategory}
+                                                className="bg-green-500 text-white p-2 rounded-full hover:bg-green-600 transition-colors"
+                                            >
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                    <path d="M5 12h14"/>
+                                                    <path d="M12 5v14"/>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                        <div className="space-y-3 max-h-60 overflow-y-auto">
+                                            {customCategories.map((category, index) => (
+                                                <div key={index} className="flex gap-2">
+                                                    <input
+                                                        type="text"
+                                                        value={category}
+                                                        onChange={(e) => updateCustomCategory(index, e.target.value)}
+                                                        className="flex-1 p-3 border-2 border-gray-300 rounded-xl focus:border-purple-500 focus:outline-none"
+                                                        placeholder={`Category ${index + 1}`}
+                                                    />
+                                                    {customCategories.length > 1 && (
+                                                        <button
+                                                            onClick={() => removeCustomCategory(index)}
+                                                            className="bg-red-500 text-white p-3 rounded-xl hover:bg-red-600 transition-colors"
+                                                        >
+                                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                                <path d="M3 6h18"/>
+                                                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                                                                <path d="M8 6V4c0-1 1-2 2-2h4c-1 0 2 1 2 2v2"/>
+                                                            </svg>
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Password Input */}
+                                    <div className="mb-6">
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Creator Password (for editing later)</label>
+                                        <div className="relative">
+                                            <input
+                                                type={showPassword ? 'text' : 'password'}
+                                                value={creatorPassword}
+                                                onChange={(e) => setCreatorPassword(e.target.value)}
+                                                className="w-full p-3 pr-12 border-2 border-gray-300 rounded-xl focus:border-purple-500 focus:outline-none"
+                                                placeholder="Enter a password to protect your game"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowPassword(!showPassword)}
+                                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                                            >
+                                                {showPassword ? (
+                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                        <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
+                                                        <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>
+                                                        <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/>
+                                                        <line x1="2" x2="22" y1="2" y2="22"/>
+                                                    </svg>
+                                                ) : (
+                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                                                        <circle cx="12" cy="12" r="3"/>
+                                                    </svg>
+                                                )}
+                                            </button>
+                                        </div>
+                                        <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                                            <div className="flex items-start gap-2">
+                                                <div className="text-amber-600 mt-0.5">⚠️</div>
+                                                <div className="text-sm text-amber-800">
+                                                    <p className="font-medium mb-1">Important Notes:</p>
+                                                    <ul className="space-y-1 text-xs">
+                                                        <li>• Your custom game will be <strong>accessible for 7 days only</strong></li>
+                                                        <li>• You need this password to edit your game later</li>
+                                                        <li>• Save your password - it cannot be recovered</li>
+                                                        <li>• Share links will stop working after 7 days</li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
 
                         {/* Customizer Modal */}
                         {showCustomizer && (
@@ -674,37 +854,6 @@
                                             </div>
                                         </div>
                                     </div>
-
-                                    {/* Share Link Display */}
-                                    {shareLink && (
-                                        <div className="mb-6 p-5 bg-gradient-to-r from-green-50 to-emerald-50 border-3 border-green-300 rounded-2xl shadow-lg">
-                                            <h3 className="font-bold text-green-800 mb-3 text-lg flex items-center">
-                                                🎉 Your Share Link is Ready!
-                                            </h3>
-                                            <div className="flex gap-2 mb-4">
-                                                <input 
-                                                    type="text" 
-                                                    value={shareLink} 
-                                                    readOnly 
-                                                    className="flex-1 p-3 bg-white border-2 border-green-300 rounded-lg text-sm font-mono" 
-                                                />
-                                                <button
-                                                    onClick={copyShareLink}
-                                                    className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors font-semibold"
-                                                >
-                                                    📋 Copy
-                                                </button>
-                                            </div>
-                                            <div className="bg-green-100 p-4 rounded-lg border border-green-200">
-                                                <h4 className="font-bold text-green-800 mb-2">📋 Instructions:</h4>
-                                                <ol className="text-sm text-green-700 space-y-1.5">
-                                                    <li><strong>1.</strong> Share this link with anyone for them to participate!</li>
-                                                    <li><strong>2.</strong> Use this link to retrieve/edit your customized game in the future</li>
-                                                    <li><strong>3.</strong> This link will be active for 7 days. Happy gaming!</li>
-                                                </ol>
-                                            </div>
-                                        </div>
-                                    )}
 
                                     {/* Action Buttons */}
                                     <div className="flex gap-3">
