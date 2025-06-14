@@ -17,7 +17,7 @@
     <div id="root"></div>
     <script type="text/babel">
         // 🔥 REPLACE WITH YOUR ACTUAL FIREBASE CONFIG
-      const firebaseConfig = {
+        const firebaseConfig = {
   apiKey: "AIzaSyCKVkzw8bHYiaqwS6J0xrTplhnXYdEQwiQ",
   authDomain: "human-bingo-game.firebaseapp.com",
   projectId: "human-bingo-game",
@@ -31,12 +31,17 @@
         const db = firebase.firestore();
 
         // Lucide Icons as React components
-        const Camera = () => React.createElement('svg', {
-            width: 24, height: 24, viewBox: '0 0 24 24', fill: 'none',
-            stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round'
+        const Camera = ({ size = 24 }) => React.createElement('svg', {
+            width: size, height: size, viewBox: '0 0 24 24', fill: 'currentColor'
         }, [
-            React.createElement('path', { key: 1, d: 'm14.5 4-2-2h-5l-2 2h-2a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2z' }),
-            React.createElement('circle', { key: 2, cx: 12, cy: 13, r: 3 })
+            React.createElement('path', { 
+                key: 1, 
+                d: 'M12 15.5c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3z'
+            }),
+            React.createElement('path', { 
+                key: 2, 
+                d: 'M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z'
+            })
         ]);
 
         const Settings = () => React.createElement('svg', {
@@ -663,7 +668,7 @@
                                             key: 'capture',
                                             onClick: capturePhoto,
                                             className: "bg-white p-4 rounded-full shadow-lg hover:bg-gray-100 transition-colors"
-                                        }, React.createElement(Camera)),
+                                        }, React.createElement(Camera, { size: screenSize === 'tiny' ? 20 : 16 })),
                                         React.createElement('button', {
                                             key: 'cancel',
                                             onClick: stopCamera,
