@@ -342,17 +342,68 @@
                 alert('Share link copied to clipboard!');
             };
 
-            const applyCustomization = () => {
+            const saveGame = async () => {
                 const validCategories = customCategories.filter(cat => cat.trim() !== '');
                 if (validCategories.length < 4) {
                     alert('Please add at least 4 categories for your game.');
                     return;
                 }
-                setCategories(validCategories);
-                setCompletedBoxes(new Set());
-                setPhotos({});
-                setNames({});
-                setShowCustomizer(false);
+
+                if (!creatorPassword.trim()) {
+                    alert('Please enter a password to secure your custom game.');
+                    return;
+                }
+
+                setIsCreatingLink(true);
+                
+                try {
+                    // Apply changes locally first
+                    setCategories(validCategories);
+                    setCompletedBoxes(new Set());
+                    setPhotos({});
+                    setNames({});
+
+                    if (gameId && isEditMode) {
+                        // Update existing game
+                        const gameData = {
+                            title: gameTitle,
+                            description: gameDescription,
+                            categories: validCategories,
+                            password: creatorPassword,
+                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        };
+
+                        await db.collection('games').doc(gameId).update(gameData);
+                        const currentShareLink = `${window.location.origin}${window.location.pathname}?game=${gameId}`;
+                        setShareLink(currentShareLink);
+                        
+                        // Navigate to the updated game
+                        window.location.href = currentShareLink;
+                    } else {
+                        // Create new game
+                        const gameData = {
+                            title: gameTitle,
+                            description: gameDescription,
+                            categories: validCategories,
+                            password: creatorPassword,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+                        };
+
+                        const docRef = await db.collection('games').add(gameData);
+                        const newShareLink = `${window.location.origin}${window.location.pathname}?game=${docRef.id}`;
+                        setShareLink(newShareLink);
+                        setGameId(docRef.id);
+                        
+                        // Navigate to the new game
+                        window.location.href = newShareLink;
+                    }
+                } catch (error) {
+                    console.error('Error saving game:', error);
+                    alert('Failed to save game: ' + error.message);
+                } finally {
+                    setIsCreatingLink(false);
+                }
             };
 
             return (
@@ -600,17 +651,11 @@
                                             Cancel
                                         </button>
                                         <button
-                                            onClick={applyCustomization}
-                                            className="flex-1 bg-purple-500 text-white py-3 px-4 rounded-full font-semibold hover:bg-purple-600 transition-colors"
-                                        >
-                                            Apply Changes
-                                        </button>
-                                        <button
-                                            onClick={isEditMode ? updateExistingGame : createShareLink}
+                                            onClick={saveGame}
                                             disabled={isCreatingLink}
-                                            className="flex-1 bg-blue-500 text-white py-3 px-4 rounded-full font-semibold hover:bg-blue-600 transition-colors disabled:opacity-50"
+                                            className="flex-2 bg-blue-500 text-white py-3 px-6 rounded-full font-semibold hover:bg-blue-600 transition-colors disabled:opacity-50"
                                         >
-                                            {isCreatingLink ? 'Saving...' : isEditMode ? 'Update Game' : 'Create Share Link'}
+                                            {isCreatingLink ? 'Saving...' : 'Save Game'}
                                         </button>
                                     </div>
                                 </div>
