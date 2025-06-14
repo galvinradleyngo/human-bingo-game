@@ -199,29 +199,7 @@
                     };
                     reader.readAsDataURL(file);
                 }
-                if (event.target) event.target.value = '';
-            };
-
-            const openPhotoLibrary = () => {
-                const input = document.createElement('input');
-                input.type = 'file';
-                input.accept = 'image/*';
-                input.multiple = false;
-                input.onchange = (e) => {
-                    const file = e.target.files[0];
-                    if (file && file.type.startsWith('image/')) {
-                        const reader = new FileReader();
-                        reader.onload = (event) => {
-                            setPhotos(prev => ({ ...prev, [cameraIndex]: event.target.result }));
-                            setPendingPhotoIndex(cameraIndex);
-                            setShowNameInput(true);
-                            setCameraIndex(null);
-                            setUseFileInput(false);
-                        };
-                        reader.readAsDataURL(file);
-                    }
-                };
-                input.click();
+                event.target.value = '';
             };
 
             const saveName = () => {
