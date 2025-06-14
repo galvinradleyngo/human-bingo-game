@@ -220,6 +220,12 @@
                             setIsEditMode(true);
                             setShowPasswordPrompt(false);
                             setCreatorPassword(passwordInput.trim());
+                            
+                            // Load existing game data into customizer
+                            setGameTitle(gameData.title || 'Custom Human Bingo');
+                            setGameDescription(gameData.description || 'Custom selfie bingo game!');
+                            setCustomCategories(gameData.categories || categories);
+                            
                             openCustomizer();
                         } else {
                             setPasswordError('Incorrect password. Please try again.');
@@ -553,8 +559,8 @@
                                     {/* Share Link Display */}
                                     {shareLink && (
                                         <div className="mb-6 p-4 bg-green-50 border-2 border-green-200 rounded-xl">
-                                            <h3 className="font-semibold text-green-800 mb-2">🎉 Your Share Link is Ready!</h3>
-                                            <div className="flex gap-2 mb-3">
+                                            <h3 className="font-semibold text-green-800 mb-3">🎉 Your Share Link is Ready!</h3>
+                                            <div className="flex gap-2 mb-4">
                                                 <input 
                                                     type="text" 
                                                     value={shareLink} 
@@ -571,8 +577,13 @@
                                                     </svg>
                                                 </button>
                                             </div>
-                                            <div className="text-xs text-green-700 bg-green-100 p-2 rounded">
-                                                <strong>Remember:</strong> This link expires in 7 days. Save your password to edit the game later!
+                                            <div className="bg-green-100 p-3 rounded-lg">
+                                                <h4 className="font-medium text-green-800 mb-2">📋 Instructions:</h4>
+                                                <ol className="text-sm text-green-700 space-y-1">
+                                                    <li><strong>1.</strong> Share this link with anyone for them to participate!</li>
+                                                    <li><strong>2.</strong> Use this link to retrieve/edit your customized game in the future</li>
+                                                    <li><strong>3.</strong> This link will be active for 7 days. Happy gaming!</li>
+                                                </ol>
                                             </div>
                                         </div>
                                     )}
