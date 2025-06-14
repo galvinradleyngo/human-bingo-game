@@ -9,11 +9,588 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
     <div id="root"></div>
     <script type="text/babel">
-        // PASTE THE REACT COMPONENT CODE HERE
+        // 🔥 REPLACE THIS WITH YOUR FIREBASE CONFIG FROM STEP 2
+        const firebaseConfig = {
+            apiKey: "your-api-key",
+            authDomain: "your-project.firebaseapp.com",
+            projectId: "your-project-id",
+            storageBucket: "your-project.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "your-app-id"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        const { useState, useRef, useEffect } = React;
+        const { Camera, Edit3, Check, RotateCcw, Settings, Plus, Trash2, Copy, Eye, EyeOff } = lucide;
+
+        const HumanBingoGame = () => {
+            // Default categories
+            const defaultCategories = [
+                "Nervous about the future",
+                "Nature Lover", 
+                "Thinks their future job doesn't exist yet",
+                "Secretly excited to grow older",
+                "Would choose more free time over more money",
+                "Believes our generation will do better",
+                "Has a pet",
+                "Binge watches shows",
+                "Likes to read"
+            ];
+
+            const [categories, setCategories] = useState(defaultCategories);
+            const [cameraIndex, setCameraIndex] = useState(null);
+            const [completedBoxes, setCompletedBoxes] = useState(new Set());
+            const [photos, setPhotos] = useState({});
+            const [names, setNames] = useState({});
+            const [editingIndex, setEditingIndex] = useState(null);
+            const [tempCategory, setTempCategory] = useState('');
+            const [previewIndex, setPreviewIndex] = useState(null);
+            const [screenSize, setScreenSize] = useState('large');
+            const [nameInput, setNameInput] = useState('');
+            const [showNameInput, setShowNameInput] = useState(false);
+            const [pendingPhotoIndex, setPendingPhotoIndex] = useState(null);
+            
+            // Customization states
+            const [showCustomizer, setShowCustomizer] = useState(false);
+            const [customCategories, setCustomCategories] = useState(['']);
+            const [gameTitle, setGameTitle] = useState('Human Bingo Selfie');
+            const [gameDescription, setGameDescription] = useState('Take selfies with people to complete your bingo!');
+            const [creatorPassword, setCreatorPassword] = useState('');
+            const [showPassword, setShowPassword] = useState(false);
+            const [shareLink, setShareLink] = useState('');
+            const [isCreatingLink, setIsCreatingLink] = useState(false);
+            const [gameId, setGameId] = useState(null);
+            const [isCustomGame, setIsCustomGame] = useState(false);
+            
+            const videoRef = useRef(null);
+            const canvasRef = useRef(null);
+            const fileInputRef = useRef(null);
+            const [stream, setStream] = useState(null);
+            const [useFileInput, setUseFileInput] = useState(false);
+
+            // Load game on component mount
+            useEffect(() => {
+                const updateScreenSize = () => {
+                    const width = window.innerWidth;
+                    if (width < 350) setScreenSize('tiny');
+                    else if (width < 480) setScreenSize('small');
+                    else if (width < 768) setScreenSize('medium');
+                    else setScreenSize('large');
+                };
+
+                const loadGameFromURL = async () => {
+                    try {
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const gameIdParam = urlParams.get('game');
+                        
+                        if (gameIdParam) {
+                            // Load custom game from Firebase
+                            const gameDoc = await db.collection('games').doc(gameIdParam).get();
+                            if (gameDoc.exists) {
+                                const gameData = gameDoc.data();
+                                setGameId(gameIdParam);
+                                setIsCustomGame(true);
+                                setGameTitle(gameData.title || 'Custom Human Bingo');
+                                setGameDescription(gameData.description || 'Custom selfie bingo game!');
+                                setCategories(gameData.categories || defaultCategories);
+                            }
+                        }
+                    } catch (error) {
+                        console.log('Could not load custom game, using defaults');
+                    }
+                };
+
+                updateScreenSize();
+                loadGameFromURL();
+                window.addEventListener('resize', updateScreenSize);
+                return () => window.removeEventListener('resize', updateScreenSize);
+            }, []);
+
+            // Get layout configuration
+            const getLayoutConfig = () => {
+                const numCategories = categories.length;
+                const cols = numCategories <= 4 ? 2 : numCategories <= 9 ? 3 : numCategories <= 16 ? 4 : 5;
+                
+                switch (screenSize) {
+                    case 'tiny':
+                    case 'small':
+                        return { grid: `grid-cols-${Math.min(cols, 2)}`, spacing: 'gap-3', textSize: 'text-xs', buttonSize: 'p-2' };
+                    case 'medium':
+                        return { grid: `grid-cols-${Math.min(cols, 3)}`, spacing: 'gap-2', textSize: 'text-xs', buttonSize: 'p-2' };
+                    default:
+                        return { grid: `grid-cols-${cols}`, spacing: 'gap-3', textSize: 'text-xs', buttonSize: 'p-2' };
+                }
+            };
+
+            const layoutConfig = getLayoutConfig();
+            const hasCustomCategories = JSON.stringify(categories) !== JSON.stringify(defaultCategories);
+            const completedCount = completedBoxes.size;
+            const isWinner = completedCount === categories.length;
+
+            // Camera functions
+            const startCamera = async (index) => {
+                setCameraIndex(index);
+                try {
+                    const mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                    setStream(mediaStream);
+                    if (videoRef.current) videoRef.current.srcObject = mediaStream;
+                    setUseFileInput(false);
+                } catch (error) {
+                    setUseFileInput(true);
+                }
+            };
+
+            const stopCamera = () => {
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                    setStream(null);
+                }
+                setCameraIndex(null);
+                setUseFileInput(false);
+            };
+
+            const capturePhoto = () => {
+                if (videoRef.current && canvasRef.current) {
+                    const canvas = canvasRef.current;
+                    const video = videoRef.current;
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(video, 0, 0);
+                    
+                    const photoDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                    setPhotos(prev => ({ ...prev, [cameraIndex]: photoDataUrl }));
+                    setPendingPhotoIndex(cameraIndex);
+                    setShowNameInput(true);
+                    stopCamera();
+                }
+            };
+
+            const handleFileInput = (event) => {
+                const file = event.target.files[0];
+                if (file && file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        setPhotos(prev => ({ ...prev, [cameraIndex]: e.target.result }));
+                        setPendingPhotoIndex(cameraIndex);
+                        setShowNameInput(true);
+                        setCameraIndex(null);
+                        setUseFileInput(false);
+                    };
+                    reader.readAsDataURL(file);
+                }
+                event.target.value = '';
+            };
+
+            // Game functions
+            const saveName = () => {
+                if (pendingPhotoIndex !== null) {
+                    setNames(prev => ({ ...prev, [pendingPhotoIndex]: nameInput.trim() }));
+                    setCompletedBoxes(prev => new Set([...prev, pendingPhotoIndex]));
+                    setNameInput('');
+                    setShowNameInput(false);
+                    setPendingPhotoIndex(null);
+                }
+            };
+
+            const skipName = () => {
+                if (pendingPhotoIndex !== null) {
+                    setCompletedBoxes(prev => new Set([...prev, pendingPhotoIndex]));
+                    setNameInput('');
+                    setShowNameInput(false);
+                    setPendingPhotoIndex(null);
+                }
+            };
+
+            const resetGame = () => {
+                setCompletedBoxes(new Set());
+                setPhotos({});
+                setNames({});
+                setPreviewIndex(null);
+                setShowNameInput(false);
+                setNameInput('');
+                setPendingPhotoIndex(null);
+                stopCamera();
+            };
+
+            // Customization functions
+            const openCustomizer = () => {
+                setCustomCategories([...categories]);
+                setShowCustomizer(true);
+            };
+
+            const addCustomCategory = () => {
+                setCustomCategories([...customCategories, '']);
+            };
+
+            const removeCustomCategory = (index) => {
+                if (customCategories.length > 1) {
+                    setCustomCategories(customCategories.filter((_, i) => i !== index));
+                }
+            };
+
+            const updateCustomCategory = (index, value) => {
+                const newCategories = [...customCategories];
+                newCategories[index] = value;
+                setCustomCategories(newCategories);
+            };
+
+            const createShareLink = async () => {
+                if (!creatorPassword.trim()) {
+                    alert('Please enter a password to secure your custom game.');
+                    return;
+                }
+
+                const validCategories = customCategories.filter(cat => cat.trim() !== '');
+                if (validCategories.length < 4) {
+                    alert('Please add at least 4 categories for your game.');
+                    return;
+                }
+
+                setIsCreatingLink(true);
+                try {
+                    const gameData = {
+                        title: gameTitle,
+                        description: gameDescription,
+                        categories: validCategories,
+                        password: creatorPassword,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+                    };
+
+                    const docRef = await db.collection('games').add(gameData);
+                    const newShareLink = `${window.location.origin}${window.location.pathname}?game=${docRef.id}`;
+                    setShareLink(newShareLink);
+                    setGameId(docRef.id);
+                } catch (error) {
+                    console.error('Error creating share link:', error);
+                    alert('Failed to create share link. Please try again.');
+                } finally {
+                    setIsCreatingLink(false);
+                }
+            };
+
+            const copyShareLink = () => {
+                navigator.clipboard.writeText(shareLink);
+                alert('Share link copied to clipboard!');
+            };
+
+            const applyCustomization = () => {
+                const validCategories = customCategories.filter(cat => cat.trim() !== '');
+                if (validCategories.length < 4) {
+                    alert('Please add at least 4 categories for your game.');
+                    return;
+                }
+                setCategories(validCategories);
+                setCompletedBoxes(new Set());
+                setPhotos({});
+                setNames({});
+                setShowCustomizer(false);
+            };
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-purple-400 via-pink-500 to-red-500 p-4 pb-8">
+                    <div className={`${screenSize === 'tiny' ? 'max-w-sm' : 'max-w-md'} mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden`}>
+                        {/* Header */}
+                        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 text-white">
+                            <h1 className={`${screenSize === 'tiny' ? 'text-xl' : 'text-2xl'} font-bold text-center mb-2`}>
+                                📸 {gameTitle}
+                            </h1>
+                            <p className={`text-center text-indigo-100 ${screenSize === 'tiny' ? 'text-xs' : 'text-sm'}`}>
+                                {screenSize === 'tiny' ? 'Take selfies with friends!' : gameDescription}
+                            </p>
+                            <div className="mt-4 flex justify-between items-center">
+                                <span className={`${screenSize === 'tiny' ? 'text-xs' : 'text-sm'} bg-white/20 px-3 py-1 rounded-full`}>
+                                    {completedCount}/{categories.length} completed
+                                </span>
+                                <div className="flex gap-2">
+                                    <button onClick={openCustomizer} className="p-2 bg-blue-500/20 border border-blue-300/30 rounded-full hover:bg-blue-500/30 transition-colors">
+                                        <Settings size={screenSize === 'tiny' ? 14 : 16} />
+                                    </button>
+                                    <button onClick={resetGame} className="p-2 bg-white/20 rounded-full hover:bg-white/30 transition-colors">
+                                        <RotateCcw size={screenSize === 'tiny' ? 14 : 16} />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Customizer Modal */}
+                        {showCustomizer && (
+                            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+                                <div className="bg-white rounded-3xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                                    <h2 className="text-2xl font-bold text-center mb-6 text-gray-800">🎨 Customize Your Game</h2>
+                                    
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Game Title</label>
+                                        <input
+                                            type="text"
+                                            value={gameTitle}
+                                            onChange={(e) => setGameTitle(e.target.value)}
+                                            className="w-full p-3 border-2 border-gray-300 rounded-xl focus:border-purple-500 focus:outline-none"
+                                            placeholder="Enter your game title"
+                                        />
+                                    </div>
+
+                                    <div className="mb-6">
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Game Description</label>
+                                        <input
+                                            type="text"
+                                            value={gameDescription}
+                                            onChange={(e) => setGameDescription(e.target.value)}
+                                            className="w-full p-3 border-2 border-gray-300 rounded-xl focus:border-purple-500 focus:outline-none"
+                                            placeholder="Enter your game description"
+                                        />
+                                    </div>
+
+                                    <div className="mb-6">
+                                        <div className="flex justify-between items-center mb-3">
+                                            <label className="block text-sm font-medium text-gray-700">Categories ({customCategories.length})</label>
+                                            <button onClick={addCustomCategory} className="bg-green-500 text-white p-2 rounded-full hover:bg-green-600 transition-colors">
+                                                <Plus size={16} />
+                                            </button>
+                                        </div>
+                                        
+                                        <div className="space-y-3 max-h-60 overflow-y-auto">
+                                            {customCategories.map((category, index) => (
+                                                <div key={index} className="flex gap-2">
+                                                    <input
+                                                        type="text"
+                                                        value={category}
+                                                        onChange={(e) => updateCustomCategory(index, e.target.value)}
+                                                        className="flex-1 p-3 border-2 border-gray-300 rounded-xl focus:border-purple-500 focus:outline-none"
+                                                        placeholder={`Category ${index + 1}`}
+                                                    />
+                                                    {customCategories.length > 1 && (
+                                                        <button onClick={() => removeCustomCategory(index)} className="bg-red-500 text-white p-3 rounded-xl hover:bg-red-600 transition-colors">
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="mb-6">
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Creator Password (for editing later)</label>
+                                        <div className="relative">
+                                            <input
+                                                type={showPassword ? 'text' : 'password'}
+                                                value={creatorPassword}
+                                                onChange={(e) => setCreatorPassword(e.target.value)}
+                                                className="w-full p-3 pr-12 border-2 border-gray-300 rounded-xl focus:border-purple-500 focus:outline-none"
+                                                placeholder="Enter a password to protect your game"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowPassword(!showPassword)}
+                                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                                            >
+                                                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {shareLink && (
+                                        <div className="mb-6 p-4 bg-green-50 border-2 border-green-200 rounded-xl">
+                                            <h3 className="font-semibold text-green-800 mb-2">🎉 Your Share Link is Ready!</h3>
+                                            <div className="flex gap-2">
+                                                <input type="text" value={shareLink} readOnly className="flex-1 p-2 bg-white border border-green-300 rounded-lg text-sm" />
+                                                <button onClick={copyShareLink} className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors">
+                                                    <Copy size={16} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="flex gap-3">
+                                        <button onClick={() => setShowCustomizer(false)} className="flex-1 bg-gray-500 text-white py-3 px-4 rounded-full font-semibold hover:bg-gray-600 transition-colors">
+                                            Cancel
+                                        </button>
+                                        <button onClick={applyCustomization} className="flex-1 bg-purple-500 text-white py-3 px-4 rounded-full font-semibold hover:bg-purple-600 transition-colors">
+                                            Apply Changes
+                                        </button>
+                                        <button onClick={createShareLink} disabled={isCreatingLink} className="flex-1 bg-blue-500 text-white py-3 px-4 rounded-full font-semibold hover:bg-blue-600 transition-colors disabled:opacity-50">
+                                            {isCreatingLink ? 'Creating...' : 'Create Share Link'}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Progress Bar */}
+                        {cameraIndex === null && previewIndex === null && !showNameInput && !showCustomizer && (
+                            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 z-10">
+                                <div className="bg-gray-200 rounded-full h-3 overflow-hidden">
+                                    <div className="bg-gradient-to-r from-purple-500 to-pink-500 h-full transition-all duration-500" 
+                                         style={{ width: `${(completedCount / categories.length) * 100}%` }} />
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Name Input Modal */}
+                        {showNameInput && (
+                            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                                <div className="bg-white rounded-3xl p-6 max-w-sm w-full">
+                                    <h2 className="text-xl font-bold text-center mb-4 text-gray-800">📝 Who's in the photo?</h2>
+                                    <input
+                                        type="text"
+                                        value={nameInput}
+                                        onChange={(e) => setNameInput(e.target.value)}
+                                        placeholder="Enter their name (optional)"
+                                        className="w-full p-3 border-2 border-gray-300 rounded-xl text-center focus:border-purple-500 focus:outline-none mb-4"
+                                        autoFocus
+                                        onKeyDown={(e) => e.key === 'Enter' ? saveName() : e.key === 'Escape' ? skipName() : null}
+                                    />
+                                    <div className="flex gap-3">
+                                        <button onClick={skipName} className="flex-1 bg-gray-500 text-white py-3 px-4 rounded-full font-semibold hover:bg-gray-600 transition-colors">Skip</button>
+                                        <button onClick={saveName} className="flex-1 bg-purple-500 text-white py-3 px-4 rounded-full font-semibold hover:bg-purple-600 transition-colors">Save</button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Photo Preview */}
+                        {previewIndex !== null && (
+                            <div className="fixed inset-0 bg-black z-50 flex flex-col" onClick={() => setPreviewIndex(null)}>
+                                <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-4 text-white">
+                                    <h2 className="text-lg font-semibold text-center">{categories[previewIndex]}</h2>
+                                    {names[previewIndex] && <p className="text-center text-indigo-100 mt-1 font-medium">with {names[previewIndex]}</p>}
+                                </div>
+                                <div className="flex-1 flex items-center justify-center p-4">
+                                    <img src={photos[previewIndex]} alt={categories[previewIndex]} className="max-w-full max-h-full object-contain rounded-lg shadow-2xl" onClick={(e) => e.stopPropagation()} />
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Camera View */}
+                        {cameraIndex !== null && (
+                            <div className="fixed inset-0 bg-black z-50 flex flex-col">
+                                <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-4 text-white">
+                                    <h2 className="text-lg font-semibold text-center">{categories[cameraIndex]}</h2>
+                                    <p className="text-center text-sm text-indigo-100 mt-1">Take a selfie with someone who matches this!</p>
+                                </div>
+                                
+                                <div className="flex-1 flex items-center justify-center p-4">
+                                    {useFileInput ? (
+                                        <div className="text-center">
+                                            <div className="bg-white rounded-2xl p-8 max-w-sm">
+                                                <Camera size={48} className="mx-auto mb-4 text-purple-500" />
+                                                <p className="text-gray-700 mb-4">Choose a photo from your device</p>
+                                                <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileInput} className="hidden" />
+                                                <div className="flex gap-3">
+                                                    <button onClick={() => fileInputRef.current?.click()} className="flex-1 bg-purple-500 text-white py-3 px-4 rounded-full font-semibold hover:bg-purple-600 transition-colors">Choose Photo</button>
+                                                    <button onClick={stopCamera} className="flex-1 bg-gray-500 text-white py-3 px-4 rounded-full font-semibold hover:bg-gray-600 transition-colors">Cancel</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <video ref={videoRef} autoPlay playsInline className="max-w-full max-h-full object-contain rounded-lg shadow-2xl" />
+                                            <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex gap-4">
+                                                <button onClick={capturePhoto} className="bg-white p-4 rounded-full shadow-lg hover:bg-gray-100 transition-colors">
+                                                    <Camera size={32} className="text-purple-500" />
+                                                </button>
+                                                <button onClick={stopCamera} className="bg-red-500 text-white px-6 py-3 rounded-full font-semibold hover:bg-red-600 transition-colors">Cancel</button>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Bingo Grid */}
+                        {cameraIndex === null && previewIndex === null && !showNameInput && !showCustomizer && (
+                            <div className="p-6 pb-8">
+                                <div className={`grid ${layoutConfig.grid} ${layoutConfig.spacing}`}>
+                                    {categories.map((category, index) => (
+                                        <div
+                                            key={index}
+                                            className={`relative aspect-square border-2 rounded-xl p-3 flex flex-col items-center justify-center text-center transition-all
+                                                ${completedBoxes.has(index) ? 'border-green-500 bg-green-50 cursor-pointer hover:border-green-600' : 'border-gray-300 bg-gray-50 hover:border-purple-400 hover:bg-purple-50'}
+                                                ${screenSize === 'tiny' ? 'min-h-[120px]' : ''}`}
+                                            onClick={() => completedBoxes.has(index) && setPreviewIndex(index)}
+                                        >
+                                            {completedBoxes.has(index) && photos[index] && (
+                                                <img src={photos[index]} alt={category} className="absolute inset-0 w-full h-full object-cover rounded-xl" />
+                                            )}
+                                            
+                                            {completedBoxes.has(index) && (
+                                                <div className="absolute top-2 right-2 bg-green-500 rounded-full p-1">
+                                                    <Check size={12} className="text-white" />
+                                                </div>
+                                            )}
+
+                                            {completedBoxes.has(index) && names[index] && (
+                                                <div className="absolute bottom-1 left-1 right-1 bg-black/70 text-white text-xs px-2 py-1 rounded text-center truncate">
+                                                    {names[index]}
+                                                </div>
+                                            )}
+
+                                            <span className={`${layoutConfig.textSize} font-medium z-10 ${completedBoxes.has(index) ? 'text-white bg-black/50 px-2 py-1 rounded' : 'text-gray-700'}`}>
+                                                {category}
+                                            </span>
+
+                                            {!completedBoxes.has(index) && (
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        startCamera(index);
+                                                    }}
+                                                    className={`mt-2 ${layoutConfig.buttonSize} bg-purple-500 text-white rounded-full hover:bg-purple-600 transition-colors z-10`}
+                                                >
+                                                    <Camera size={screenSize === 'tiny' ? 20 : 16} />
+                                                </button>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Footer */}
+                        <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
+                            <p className="text-center text-xs text-gray-500">
+                                Licensed under{' '}
+                                <a 
+                                    href="https://creativecommons.org/licenses/by-nc/4.0/" 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-purple-600 hover:text-purple-700 underline"
+                                >
+                                    Creative Commons Non-Commercial 4.0
+                                </a>
+                            </p>
+                        </div>
+
+                        {/* Hidden canvas for photo capture */}
+                        <canvas ref={canvasRef} style={{ display: 'none' }} />
+                        
+                        {/* Hidden file input */}
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*"
+                            onChange={handleFileInput}
+                            style={{ display: 'none' }}
+                        />
+                    </div>
+                </div>
+            );
+        };
+
+        ReactDOM.render(<HumanBingoGame />, document.getElementById('root'));
     </script>
 </body>
 </html>
