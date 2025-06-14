@@ -11,8 +11,8 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     
     <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 </head>
 <body>
     <div id="root"></div>
@@ -28,8 +28,8 @@
 };
         
         // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
+  firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
         const { useState, useRef, useEffect } = React;
         const { Camera, Edit3, Check, RotateCcw, Settings, Plus, Trash2, Copy, Eye, EyeOff } = lucide;
