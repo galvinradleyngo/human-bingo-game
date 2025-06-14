@@ -16,15 +16,15 @@
 <body>
     <div id="root"></div>
     <script type="text/babel">
-        // 🔥 REPLACE WITH YOUR ACTUAL FIREBASE CONFIG
+        // 🔥 Your Firebase Configuration
         const firebaseConfig = {
-  apiKey: "AIzaSyCKVkzw8bHYiaqwS6J0xrTplhnXYdEQwiQ",
-  authDomain: "human-bingo-game.firebaseapp.com",
-  projectId: "human-bingo-game",
-  storageBucket: "human-bingo-game.firebasestorage.app",
-  messagingSenderId: "133740150923",
-  appId: "1:133740150923:web:0266b47cb2cc4e0d1e548e"
-};
+            apiKey: "AIzaSyCKVkzw8bHYiaqwS6J0xrTplhnXYdEQwiQ",
+            authDomain: "human-bingo-game.firebaseapp.com",
+            projectId: "human-bingo-game",
+            storageBucket: "human-bingo-game.firebasestorage.app",
+            messagingSenderId: "133740150923",
+            appId: "1:133740150923:web:0266b47cb2cc4e0d1e548e"
+        };
         
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
@@ -148,6 +148,10 @@
             const [isCreatingLink, setIsCreatingLink] = useState(false);
             const [gameId, setGameId] = useState(null);
             const [isCustomGame, setIsCustomGame] = useState(false);
+            const [isEditMode, setIsEditMode] = useState(false);
+            const [showPasswordPrompt, setShowPasswordPrompt] = useState(false);
+            const [passwordInput, setPasswordInput] = useState('');
+            const [passwordError, setPasswordError] = useState('');
             
             const videoRef = useRef(null);
             const canvasRef = useRef(null);
@@ -412,6 +416,12 @@
                                     onClick: openCustomizer,
                                     className: "p-2 bg-blue-500/20 border border-blue-300/30 rounded-full hover:bg-blue-500/30 transition-colors"
                                 }, React.createElement(Settings)),
+                                isCustomGame && React.createElement('button', {
+                                    key: 'edit',
+                                    onClick: promptForPassword,
+                                    title: "Edit this custom game",
+                                    className: "p-2 bg-green-500/20 border border-green-300/30 rounded-full hover:bg-green-500/30 transition-colors"
+                                }, React.createElement(Edit3)),
                                 React.createElement('button', {
                                     key: 'reset',
                                     onClick: resetGame,
@@ -426,7 +436,8 @@
                         key: 'customizer', 
                         className: "fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto" 
                     }, React.createElement('div', { className: "bg-white rounded-3xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto" }, [
-                        React.createElement('h2', { key: 'title', className: "text-2xl font-bold text-center mb-6 text-gray-800" }, '🎨 Customize Your Game'),
+                        React.createElement('h2', { key: 'title', className: "text-2xl font-bold text-center mb-6 text-gray-800" }, 
+                            isEditMode ? '✏️ Edit Your Game' : '🎨 Customize Your Game'),
                         
                         // Game Title Input
                         React.createElement('div', { key: 'title-input', className: "mb-4" }, [
@@ -529,7 +540,10 @@
                         React.createElement('div', { key: 'actions', className: "flex gap-3" }, [
                             React.createElement('button', {
                                 key: 'cancel',
-                                onClick: () => setShowCustomizer(false),
+                                onClick: () => {
+                                    setShowCustomizer(false);
+                                    setIsEditMode(false);
+                                },
                                 className: "flex-1 bg-gray-500 text-white py-3 px-4 rounded-full font-semibold hover:bg-gray-600 transition-colors"
                             }, 'Cancel'),
                             React.createElement('button', {
@@ -539,10 +553,10 @@
                             }, 'Apply Changes'),
                             React.createElement('button', {
                                 key: 'share',
-                                onClick: createShareLink,
+                                onClick: isEditMode ? updateExistingGame : createShareLink,
                                 disabled: isCreatingLink,
                                 className: "flex-1 bg-blue-500 text-white py-3 px-4 rounded-full font-semibold hover:bg-blue-600 transition-colors disabled:opacity-50"
-                            }, isCreatingLink ? 'Creating...' : 'Create Share Link')
+                            }, isCreatingLink ? 'Saving...' : isEditMode ? 'Update Game' : 'Create Share Link')
                         ])
                     ])),
 
@@ -756,7 +770,88 @@
                         style: { display: 'none' }
                     })
                 ])
+            const EyeOff = () => React.createElement('svg', {
+                width: 20, height: 20, viewBox: '0 0 24 24', fill: 'none',
+                stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round'
+            }, [
+                React.createElement('path', { key: 1, d: 'M9.88 9.88a3 3 0 1 0 4.24 4.24' }),
+                React.createElement('path', { key: 2, d: 'M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68' }),
+                React.createElement('path', { key: 3, d: 'M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61' }),
+                React.createElement('line', { key: 4, x1: 2, x2: 22, y1: 2, y2: 22 })
             ]);
+
+            // Edit mode functions
+            const promptForPassword = () => {
+                if (!isCustomGame || !gameId) {
+                    alert('This is not a custom game that can be edited.');
+                    return;
+                }
+                setPasswordInput('');
+                setPasswordError('');
+                setShowPasswordPrompt(true);
+            };
+
+            const verifyPassword = async () => {
+                if (!passwordInput.trim()) {
+                    setPasswordError('Please enter a password.');
+                    return;
+                }
+
+                try {
+                    const gameDoc = await db.collection('games').doc(gameId).get();
+                    if (gameDoc.exists) {
+                        const gameData = gameDoc.data();
+                        if (gameData.password === passwordInput.trim()) {
+                            setIsEditMode(true);
+                            setShowPasswordPrompt(false);
+                            setCreatorPassword(passwordInput.trim());
+                            openCustomizer();
+                        } else {
+                            setPasswordError('Incorrect password. Please try again.');
+                        }
+                    } else {
+                        setPasswordError('Game not found.');
+                    }
+                } catch (error) {
+                    console.error('Error verifying password:', error);
+                    setPasswordError('Error verifying password. Please try again.');
+                }
+            };
+
+            const updateExistingGame = async () => {
+                if (!gameId || !isEditMode) {
+                    createShareLink();
+                    return;
+                }
+
+                const validCategories = customCategories.filter(cat => cat.trim() !== '');
+                if (validCategories.length < 4) {
+                    alert('Please add at least 4 categories for your game.');
+                    return;
+                }
+
+                setIsCreatingLink(true);
+                try {
+                    const gameData = {
+                        title: gameTitle,
+                        description: gameDescription,
+                        categories: validCategories,
+                        password: creatorPassword,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    };
+
+                    await db.collection('games').doc(gameId).update(gameData);
+                    
+                    const currentShareLink = `${window.location.origin}${window.location.pathname}?game=${gameId}`;
+                    setShareLink(currentShareLink);
+                    console.log('Game updated successfully');
+                } catch (error) {
+                    console.error('Error updating game:', error);
+                    alert('Failed to update game: ' + error.message);
+                } finally {
+                    setIsCreatingLink(false);
+                }
+            };
         };
 
         ReactDOM.render(React.createElement(HumanBingoGame), document.getElementById('root'));
