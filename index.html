@@ -97,17 +97,77 @@
                                 setGameDescription(gameData.description || 'Custom selfie bingo game!');
                                 setCategories(gameData.categories || defaultCategories);
                                 console.log('Game loaded successfully');
+                                
+                                // Load saved progress for this specific game
+                                loadSavedProgress(gameIdParam);
                             } else {
                                 console.log('Game not found');
                             }
+                        } else {
+                            // Load saved progress for default game
+                            loadSavedProgress('default');
                         }
                     } catch (error) {
                         console.log('Could not load custom game:', error);
+                        // Load saved progress for default game if custom game fails
+                        loadSavedProgress('default');
                     }
                 };
 
                 loadGameFromURL();
             }, []);
+
+            // Save progress automatically whenever game state changes
+            useEffect(() => {
+                saveProgress();
+            }, [completedBoxes, photos, names]);
+
+            const saveProgress = () => {
+                try {
+                    const currentGameId = gameId || 'default';
+                    const progressData = {
+                        completedBoxes: Array.from(completedBoxes),
+                        photos: photos,
+                        names: names,
+                        timestamp: Date.now()
+                    };
+                    localStorage.setItem(`humanBingo_${currentGameId}`, JSON.stringify(progressData));
+                } catch (error) {
+                    console.log('Could not save progress:', error);
+                }
+            };
+
+            const loadSavedProgress = (currentGameId) => {
+                try {
+                    const saved = localStorage.getItem(`humanBingo_${currentGameId}`);
+                    if (saved) {
+                        const progressData = JSON.parse(saved);
+                        // Only load if saved within last 24 hours
+                        if (Date.now() - progressData.timestamp < 24 * 60 * 60 * 1000) {
+                            setCompletedBoxes(new Set(progressData.completedBoxes || []));
+                            setPhotos(progressData.photos || {});
+                            setNames(progressData.names || {});
+                            console.log('Loaded saved progress');
+                        }
+                    }
+                } catch (error) {
+                    console.log('Could not load saved progress:', error);
+                }
+            };
+
+            const shareCurrentGame = () => {
+                const currentUrl = window.location.href;
+                if (navigator.share) {
+                    navigator.share({
+                        title: gameTitle,
+                        text: `Join my Human Bingo game: ${gameDescription}`,
+                        url: currentUrl
+                    });
+                } else {
+                    navigator.clipboard.writeText(currentUrl);
+                    alert('Game link copied to clipboard!');
+                }
+            };
 
             const startCamera = async (index) => {
                 setCameraIndex(index);
@@ -193,6 +253,14 @@
                 setNameInput('');
                 setPendingPhotoIndex(null);
                 stopCamera();
+                
+                // Clear saved progress
+                try {
+                    const currentGameId = gameId || 'default';
+                    localStorage.removeItem(`humanBingo_${currentGameId}`);
+                } catch (error) {
+                    console.log('Could not clear saved progress:', error);
+                }
             };
 
             // Edit mode functions
@@ -609,28 +677,27 @@
 
                                     {/* Share Link Display */}
                                     {shareLink && (
-                                        <div className="mb-6 p-4 bg-green-50 border-2 border-green-200 rounded-xl">
-                                            <h3 className="font-semibold text-green-800 mb-3">🎉 Your Share Link is Ready!</h3>
+                                        <div className="mb-6 p-5 bg-gradient-to-r from-green-50 to-emerald-50 border-3 border-green-300 rounded-2xl shadow-lg">
+                                            <h3 className="font-bold text-green-800 mb-3 text-lg flex items-center">
+                                                🎉 Your Share Link is Ready!
+                                            </h3>
                                             <div className="flex gap-2 mb-4">
                                                 <input 
                                                     type="text" 
                                                     value={shareLink} 
                                                     readOnly 
-                                                    className="flex-1 p-2 bg-white border border-green-300 rounded-lg text-sm" 
+                                                    className="flex-1 p-3 bg-white border-2 border-green-300 rounded-lg text-sm font-mono" 
                                                 />
                                                 <button
                                                     onClick={copyShareLink}
-                                                    className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors"
+                                                    className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors font-semibold"
                                                 >
-                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                        <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
-                                                        <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
-                                                    </svg>
+                                                    📋 Copy
                                                 </button>
                                             </div>
-                                            <div className="bg-green-100 p-3 rounded-lg">
-                                                <h4 className="font-medium text-green-800 mb-2">📋 Instructions:</h4>
-                                                <ol className="text-sm text-green-700 space-y-1">
+                                            <div className="bg-green-100 p-4 rounded-lg border border-green-200">
+                                                <h4 className="font-bold text-green-800 mb-2">📋 Instructions:</h4>
+                                                <ol className="text-sm text-green-700 space-y-1.5">
                                                     <li><strong>1.</strong> Share this link with anyone for them to participate!</li>
                                                     <li><strong>2.</strong> Use this link to retrieve/edit your customized game in the future</li>
                                                     <li><strong>3.</strong> This link will be active for 7 days. Happy gaming!</li>
