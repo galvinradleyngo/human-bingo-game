@@ -61,7 +61,7 @@
             const [gameTitle, setGameTitle] = useState('Human Bingo Selfie');
             const [gameDescription, setGameDescription] = useState('Take selfies with people to complete your bingo!');
             const [creatorPassword, setCreatorPassword] = useState('');
-            const [showPassword, setShowPassword] = useState(false);
+            const [showPassword, setShowPassword] = useState(true);
             const [shareLink, setShareLink] = useState('');
             const [isCreatingLink, setIsCreatingLink] = useState(false);
             const [gameId, setGameId] = useState(null);
@@ -680,8 +680,9 @@
                                                 type="button"
                                                 onClick={() => setShowPassword(!showPassword)}
                                                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                                                title={showPassword ? "Hide password" : "Show password"}
                                             >
-                                                {showPassword ? '👁️' : '👁️‍🗨️'}
+                                                {showPassword ? '🙈' : '👁️'}
                                             </button>
                                         </div>
                                     </div>
@@ -779,13 +780,32 @@
                                                 </button>
                                             </div>
                                         </div>
+                                        
+                                        {/* Password Reminder - Highlighted */}
+                                        {creatorPassword && (
+                                            <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200 rounded-xl">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <div className="text-blue-600">🔑</div>
+                                                    <h4 className="font-bold text-blue-800">Your Creator Password</h4>
+                                                </div>
+                                                <div className="bg-white p-3 rounded-lg border border-blue-300 mb-2">
+                                                    <p className="text-lg font-mono font-bold text-center text-blue-900 tracking-wider">
+                                                        {creatorPassword}
+                                                    </p>
+                                                </div>
+                                                <p className="text-sm text-blue-700 font-medium">
+                                                    💾 Save this password! You'll need it to edit your game later.
+                                                </p>
+                                            </div>
+                                        )}
+                                        
                                         <div className="bg-amber-50 p-4 rounded-xl border border-amber-200 mb-6 text-left">
                                             <h4 className="font-bold text-amber-800 mb-2">⚠️ Important:</h4>
                                             <ul className="text-sm text-amber-700 space-y-1.5">
                                                 <li><strong>•</strong> You can edit this game using your password and this link</li>
                                                 <li><strong>•</strong> This custom game will be available for <strong>7 days only</strong></li>
                                                 <li><strong>•</strong> Share this link with others to let them play your custom game</li>
-                                                <li><strong>•</strong> Save your password - it cannot be recovered</li>
+                                                <li><strong>•</strong> Your password cannot be recovered if lost</li>
                                             </ul>
                                         </div>
                                         <button
@@ -969,6 +989,9 @@
                             <div className="mb-2">
                                 <p className="text-green-700 font-medium">🔒 Privacy: Photos and game data stay on your device</p>
                                 <p className="text-gray-500">Only custom game settings are stored temporarily (7 days)</p>
+                            </div>
+                            <div className="mb-2">
+                                <p className="text-blue-700 font-medium">💌 I would love to hear your feedback - please send them to <a href="mailto:gngo@ateneo.edu" className="underline hover:text-blue-900">gngo@ateneo.edu</a></p>
                             </div>
                             <div className="flex items-center justify-center gap-1 text-gray-500">
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
