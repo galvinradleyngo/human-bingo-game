@@ -543,31 +543,17 @@
                 showToast('Share link copied to clipboard!', 'success');
             };
 
-            const generateQRCode = async (url) => {
+            const generateQRCode = (url) => {
                 try {
                     console.log('🔄 Generating QR code for:', url);
                     
-                    // Check if QRCode is available
-                    if (typeof QRCode === 'undefined') {
-                        console.log('❌ QRCode library not loaded');
-                        return;
-                    }
+                    // Use QR Server API - much more reliable
+                    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
                     
-                    const qrDataUrl = await QRCode.toDataURL(url, {
-                        width: 200,
-                        margin: 2,
-                        color: {
-                            dark: '#000000',
-                            light: '#FFFFFF'
-                        },
-                        errorCorrectionLevel: 'M'
-                    });
-                    
-                    console.log('✅ QR code generated successfully');
-                    setQrCodeDataUrl(qrDataUrl);
+                    console.log('✅ QR code URL generated:', qrUrl);
+                    setQrCodeDataUrl(qrUrl);
                 } catch (error) {
                     console.log('❌ Failed to generate QR code:', error);
-                    // Fallback: create a simple text-based "QR code"
                     setQrCodeDataUrl('fallback');
                 }
             };
