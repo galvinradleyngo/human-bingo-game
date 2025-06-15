@@ -203,7 +203,34 @@
                 if (file && file.type.startsWith('image/')) {
                     const reader = new FileReader();
                     reader.onload = (e) => {
-                        setPhotos(prev => ({ ...prev, [cameraIndex]: e.target.result }));
+                        const newPhotos = { ...photos, [cameraIndex]: e.target.result };
+                        const newCompletedBoxes = new Set([...completedBoxes, cameraIndex]);
+                        
+                        // Update state
+                        setPhotos(newPhotos);
+                        setCompletedBoxes(newCompletedBoxes);
+                        
+                        // Force immediate save
+                        const currentGameId = gameId || 'default';
+                        const immediateProgressData = {
+                            completedBoxes: Array.from(newCompletedBoxes),
+                            photos: newPhotos,
+                            names: names,
+                            categories: categories,
+                            gameTitle: gameTitle,
+                            gameDescription: gameDescription,
+                            gameId: gameId,
+                            isCustomGame: isCustomGame,
+                            timestamp: Date.now()
+                        };
+                        
+                        try {
+                            localStorage.setItem(`humanBingo_${currentGameId}`, JSON.stringify(immediateProgressData));
+                            console.log('🚀 FORCE SAVED after photo upload:', Object.keys(newPhotos).length, 'photos');
+                        } catch (error) {
+                            console.log('❌ Force save failed:', error);
+                        }
+                        
                         setPendingPhotoIndex(cameraIndex);
                         setShowNameInput(true);
                         setCameraIndex(null);
@@ -215,8 +242,30 @@
 
             const saveName = () => {
                 if (pendingPhotoIndex !== null) {
-                    setNames(prev => ({ ...prev, [pendingPhotoIndex]: nameInput.trim() }));
-                    setCompletedBoxes(prev => new Set([...prev, pendingPhotoIndex]));
+                    const newNames = { ...names, [pendingPhotoIndex]: nameInput.trim() };
+                    setNames(newNames);
+                    
+                    // Force save with name added
+                    const currentGameId = gameId || 'default';
+                    const immediateProgressData = {
+                        completedBoxes: Array.from(completedBoxes),
+                        photos: photos,
+                        names: newNames,
+                        categories: categories,
+                        gameTitle: gameTitle,
+                        gameDescription: gameDescription,
+                        gameId: gameId,
+                        isCustomGame: isCustomGame,
+                        timestamp: Date.now()
+                    };
+                    
+                    try {
+                        localStorage.setItem(`humanBingo_${currentGameId}`, JSON.stringify(immediateProgressData));
+                        console.log('🚀 FORCE SAVED after name input');
+                    } catch (error) {
+                        console.log('❌ Force save failed:', error);
+                    }
+                    
                     setNameInput('');
                     setShowNameInput(false);
                     setPendingPhotoIndex(null);
@@ -225,7 +274,27 @@
 
             const skipName = () => {
                 if (pendingPhotoIndex !== null) {
-                    setCompletedBoxes(prev => new Set([...prev, pendingPhotoIndex]));
+                    // Force save without name
+                    const currentGameId = gameId || 'default';
+                    const immediateProgressData = {
+                        completedBoxes: Array.from(completedBoxes),
+                        photos: photos,
+                        names: names,
+                        categories: categories,
+                        gameTitle: gameTitle,
+                        gameDescription: gameDescription,
+                        gameId: gameId,
+                        isCustomGame: isCustomGame,
+                        timestamp: Date.now()
+                    };
+                    
+                    try {
+                        localStorage.setItem(`humanBingo_${currentGameId}`, JSON.stringify(immediateProgressData));
+                        console.log('🚀 FORCE SAVED after skipping name');
+                    } catch (error) {
+                        console.log('❌ Force save failed:', error);
+                    }
+                    
                     setNameInput('');
                     setShowNameInput(false);
                     setPendingPhotoIndex(null);
