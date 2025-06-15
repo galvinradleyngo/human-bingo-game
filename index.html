@@ -186,6 +186,12 @@
                 }
             };
 
+            const startCamera = async (index) => {
+                setCameraIndex(index);
+                // Always use file input - no getUserMedia
+                setUseFileInput(true);
+            };
+
             const handleFileInput = (event) => {
                 const file = event.target.files[0];
                 if (file && file.type.startsWith('image/')) {
@@ -200,20 +206,6 @@
                     reader.readAsDataURL(file);
                 }
                 event.target.value = '';
-            };
-
-            const handleCameraCapture = () => {
-                if (fileInputRef.current) {
-                    fileInputRef.current.setAttribute('capture', 'environment');
-                    fileInputRef.current.click();
-                }
-            };
-
-            const handleGallerySelect = () => {
-                if (fileInputRef.current) {
-                    fileInputRef.current.removeAttribute('capture');
-                    fileInputRef.current.click();
-                }
             };
 
             const saveName = () => {
