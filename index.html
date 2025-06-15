@@ -758,13 +758,13 @@
                         {/* Share Link Display */}
                         {shareLink && (
                             <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                                <div className="bg-white rounded-3xl p-8 max-w-lg w-full shadow-2xl">
+                                <div className="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto">
                                     <div className="text-center">
                                         <div className="text-6xl mb-4">🎉</div>
                                         <h3 className="font-bold text-gray-800 mb-4 text-2xl">
                                             Your Game is Ready!
                                         </h3>
-                                        <div className="mb-6 p-4 bg-gray-50 rounded-xl border-2 border-gray-200">
+                                        <div className="mb-4 p-4 bg-gray-50 rounded-xl border-2 border-gray-200">
                                             <div className="flex gap-2 mb-3">
                                                 <input 
                                                     type="text" 
@@ -783,7 +783,7 @@
                                         
                                         {/* Password Reminder - Highlighted */}
                                         {creatorPassword && (
-                                            <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200 rounded-xl">
+                                            <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200 rounded-xl">
                                                 <div className="flex items-center gap-2 mb-2">
                                                     <div className="text-blue-600">🔑</div>
                                                     <h4 className="font-bold text-blue-800">Your Creator Password</h4>
@@ -810,7 +810,7 @@
                                         </div>
                                         <button
                                             onClick={() => setShareLink('')}
-                                            className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 px-6 rounded-full font-semibold hover:from-purple-600 hover:to-pink-600 transition-all"
+                                            className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-4 px-6 rounded-full font-semibold hover:from-purple-600 hover:to-pink-600 transition-all text-lg"
                                         >
                                             Start Playing!
                                         </button>
