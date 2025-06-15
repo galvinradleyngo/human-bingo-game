@@ -242,14 +242,17 @@
             };
 
             const goHome = () => {
+                // Go back to default game but KEEP progress
                 setGameId(null);
                 setIsCustomGame(false);
                 setGameTitle('Human Bingo Selfie');
                 setGameDescription('Take selfies with people to complete your bingo!');
                 setCategories(defaultCategories);
                 
+                // Clear URL and go to base URL
                 window.history.pushState({}, '', window.location.pathname);
                 
+                // Save this default state (keeps existing photos/progress)
                 setTimeout(() => saveProgress(), 100);
                 
                 showToast('Returned to default game!', 'success');
@@ -258,6 +261,7 @@
             const resetGame = () => {
                 console.log('Resetting game...');
                 
+                // Clear ALL progress and photos
                 setCompletedBoxes(new Set());
                 setPhotos({});
                 setNames({});
@@ -267,6 +271,7 @@
                 setPendingPhotoIndex(null);
                 stopCamera();
                 
+                // Clear localStorage for ALL game types
                 try {
                     const currentGameId = gameId || 'default';
                     localStorage.removeItem(`humanBingo_${currentGameId}`);
@@ -276,15 +281,17 @@
                     console.log('Could not clear saved progress:', error);
                 }
                 
+                // Reset to default game state
                 setGameId(null);
                 setIsCustomGame(false);
                 setGameTitle('Human Bingo Selfie');
                 setGameDescription('Take selfies with people to complete your bingo!');
                 setCategories(defaultCategories);
                 
+                // Clear URL and go back to base URL
                 window.history.replaceState({}, '', window.location.pathname);
                 
-                showToast('Game reset to default!', 'success');
+                showToast('All progress cleared! Starting fresh.', 'success');
             };
 
             const copyCurrentGameLink = () => {
