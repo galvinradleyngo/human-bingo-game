@@ -1,4 +1,4 @@
-const resetGame = () => {<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -79,26 +79,24 @@ const resetGame = () => {<!DOCTYPE html>
             const fileInputRef = useRef(null);
             const completedCount = completedBoxes.size;
 
-            // Load game on component mount - Completely rewritten
+            // Load game on component mount
             useEffect(() => {
                 const loadGameFromURL = async () => {
                     setIsLoading(true);
                     
-                    // Step 1: Check what type of game we should load
                     const urlParams = new URLSearchParams(window.location.search);
                     const gameIdParam = urlParams.get('game');
                     const currentGameId = gameIdParam || 'default';
                     
                     console.log('Loading game for ID:', currentGameId);
                     
-                    // Step 2: ALWAYS load saved progress first
+                    // Always load saved progress first
                     const saved = localStorage.getItem(`humanBingo_${currentGameId}`);
                     if (saved) {
                         try {
                             const progressData = JSON.parse(saved);
                             console.log('Found saved data:', progressData);
                             
-                            // Restore ALL saved data
                             if (progressData.completedBoxes) {
                                 setCompletedBoxes(new Set(progressData.completedBoxes));
                             }
@@ -129,7 +127,6 @@ const resetGame = () => {<!DOCTYPE html>
                     } else {
                         console.log('No saved data found');
                         
-                        // Step 3: Only if no saved data, load from Firebase (for custom games)
                         if (gameIdParam) {
                             try {
                                 const gameDoc = await db.collection('games').doc(gameIdParam).get();
@@ -149,7 +146,6 @@ const resetGame = () => {<!DOCTYPE html>
                                 showToast('Could not load custom game', 'error');
                             }
                         } else {
-                            // Default game setup
                             setGameId(null);
                             setIsCustomGame(false);
                             setGameTitle('Human Bingo Selfie');
@@ -164,13 +160,12 @@ const resetGame = () => {<!DOCTYPE html>
                 loadGameFromURL();
             }, []);
 
-            // Save progress automatically - FIXED to actually save
+            // Save progress automatically
             useEffect(() => {
-                // Only save after component has fully loaded
                 if (!isLoading) {
                     const timeoutId = setTimeout(() => {
                         saveProgress();
-                    }, 100); // Very short delay to ensure state is settled
+                    }, 100);
                     
                     return () => clearTimeout(timeoutId);
                 }
@@ -191,10 +186,8 @@ const resetGame = () => {<!DOCTYPE html>
                         timestamp: Date.now()
                     };
                     
-                    // Force save to localStorage
                     localStorage.setItem(`humanBingo_${currentGameId}`, JSON.stringify(progressData));
                     
-                    // Verify it was saved
                     const verification = localStorage.getItem(`humanBingo_${currentGameId}`);
                     if (verification) {
                         console.log('✅ Progress saved successfully for:', currentGameId);
@@ -205,8 +198,6 @@ const resetGame = () => {<!DOCTYPE html>
                     console.log('❌ Could not save progress:', error);
                 }
             };
-
-            // Remove the old loadSavedProgress function since it's now inline
 
             const startCamera = (index) => {
                 setCameraIndex(index);
@@ -251,24 +242,22 @@ const resetGame = () => {<!DOCTYPE html>
             };
 
             const goHome = () => {
-                // Go back to default game
                 setGameId(null);
                 setIsCustomGame(false);
                 setGameTitle('Human Bingo Selfie');
                 setGameDescription('Take selfies with people to complete your bingo!');
                 setCategories(defaultCategories);
                 
-                // Clear URL and go to base URL
                 window.history.pushState({}, '', window.location.pathname);
                 
-                // Save this default state
                 setTimeout(() => saveProgress(), 100);
                 
                 showToast('Returned to default game!', 'success');
             };
+
+            const resetGame = () => {
                 console.log('Resetting game...');
                 
-                // Clear all state
                 setCompletedBoxes(new Set());
                 setPhotos({});
                 setNames({});
@@ -278,24 +267,21 @@ const resetGame = () => {<!DOCTYPE html>
                 setPendingPhotoIndex(null);
                 stopCamera();
                 
-                // Clear localStorage for ALL game types
                 try {
                     const currentGameId = gameId || 'default';
                     localStorage.removeItem(`humanBingo_${currentGameId}`);
-                    localStorage.removeItem(`humanBingo_default`); // Also clear default
+                    localStorage.removeItem(`humanBingo_default`);
                     console.log('Cleared localStorage for:', currentGameId);
                 } catch (error) {
                     console.log('Could not clear saved progress:', error);
                 }
                 
-                // Reset to default game state
                 setGameId(null);
                 setIsCustomGame(false);
                 setGameTitle('Human Bingo Selfie');
                 setGameDescription('Take selfies with people to complete your bingo!');
                 setCategories(defaultCategories);
                 
-                // Clear URL and go back to base URL
                 window.history.replaceState({}, '', window.location.pathname);
                 
                 showToast('Game reset to default!', 'success');
@@ -314,7 +300,6 @@ const resetGame = () => {<!DOCTYPE html>
                 }, 3000);
             };
 
-            // Edit mode functions
             const promptForPassword = () => {
                 if (!isCustomGame || !gameId) {
                     showToast('This is not a custom game that can be edited.', 'error');
@@ -357,7 +342,6 @@ const resetGame = () => {<!DOCTYPE html>
                 }
             };
 
-            // Customization functions
             const openCustomizer = () => {
                 setCustomCategories([...categories]);
                 setShowCustomizer(true);
@@ -395,10 +379,8 @@ const resetGame = () => {<!DOCTYPE html>
                 setIsCreatingLink(true);
                 
                 try {
-                    // Update the categories state
                     setCategories(validCategories);
                     
-                    // Reset game state when creating/updating
                     setCompletedBoxes(new Set());
                     setPhotos({});
                     setNames({});
@@ -484,10 +466,9 @@ const resetGame = () => {<!DOCTYPE html>
                             </div>
                         )}
 
-                        {/* Header - Mobile Optimized Typography with Home Button */}
+                        {/* Header with Home Button */}
                         <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-4 sm:p-6 text-white">
                             <div className="flex items-center justify-center mb-2 relative">
-                                {/* Home Button - Only show if not already on default game */}
                                 {(isCustomGame || gameTitle !== 'Human Bingo Selfie') && (
                                     <button
                                         onClick={goHome}
@@ -508,7 +489,6 @@ const resetGame = () => {<!DOCTYPE html>
                                     {completedCount}/{categories.length} completed
                                 </span>
                                 <div className="flex gap-2">
-                                    {/* Copy Link Button - Icon Only */}
                                     <button
                                         onClick={copyCurrentGameLink}
                                         className="bg-yellow-500 text-yellow-900 p-2 rounded-full font-semibold hover:bg-yellow-400 transition-all shadow-lg"
@@ -520,7 +500,6 @@ const resetGame = () => {<!DOCTYPE html>
                                         </svg>
                                     </button>
                                     
-                                    {/* Customize Button */}
                                     <button
                                         onClick={isCustomGame ? promptForPassword : openCustomizer}
                                         className="p-2 bg-white/20 rounded-full hover:bg-white/30 transition-colors"
@@ -532,7 +511,6 @@ const resetGame = () => {<!DOCTYPE html>
                                         </svg>
                                     </button>
                                     
-                                    {/* Reset Button */}
                                     <button
                                         onClick={resetGame}
                                         className="p-2 bg-white/20 rounded-full hover:bg-white/30 transition-colors"
@@ -545,11 +523,9 @@ const resetGame = () => {<!DOCTYPE html>
                                     </button>
                                 </div>
                             </div>
-                            
-                            {/* Remove the click outside to close menu section since menu is removed */}
                         </div>
 
-                        {/* Progress Bar - Mobile Optimized Typography */}
+                        {/* Progress Bar */}
                         {(!cameraIndex && !previewIndex && !showNameInput) && (
                             <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4">
                                 <div className="bg-gray-200 rounded-full h-2 sm:h-3 overflow-hidden">
@@ -707,6 +683,12 @@ const resetGame = () => {<!DOCTYPE html>
                                     />
                                     <div className="flex gap-3">
                                         <button
+                                            onClick={skipName}
+                                            className="flex-1 bg-gray-500 text-white py-3 px-4 rounded-full font-semibold hover:bg-gray-600 transition-colors"
+                                        >
+                                            Skip
+                                        </button>
+                                        <button
                                             onClick={saveName}
                                             className="flex-1 bg-purple-500 text-white py-3 px-4 rounded-full font-semibold hover:bg-purple-600 transition-colors"
                                         >
@@ -717,7 +699,7 @@ const resetGame = () => {<!DOCTYPE html>
                             </div>
                         )}
 
-                        {/* Share Link Display - Center Screen Modal */}
+                        {/* Share Link Display */}
                         {shareLink && (
                             <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
                                 <div className="bg-white rounded-3xl p-8 max-w-lg w-full shadow-2xl">
@@ -816,7 +798,7 @@ const resetGame = () => {<!DOCTYPE html>
                             </div>
                         )}
 
-                        {/* Camera View - Ultra Simple */}
+                        {/* Camera View */}
                         {(cameraIndex !== null) && (
                             <div className="fixed inset-0 bg-black z-50 flex flex-col">
                                 <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-4 text-white">
@@ -826,9 +808,9 @@ const resetGame = () => {<!DOCTYPE html>
                                 
                                 <div className="flex-1 flex items-center justify-center p-4">
                                     <div className="text-center">
-                                        <div className="bg-white rounded-2xl p-8 max-w-sm w-full">
+                                        <div className="bg-white rounded-2xl p-6 sm:p-8 max-w-sm w-full">
                                             <div className="text-6xl mb-4">📷</div>
-                                            <p className="text-gray-700 mb-6">Choose a photo</p>
+                                            <p className="text-gray-700 mb-6 text-base sm:text-lg">Choose a photo</p>
                                             
                                             <input
                                                 ref={fileInputRef}
@@ -838,10 +820,10 @@ const resetGame = () => {<!DOCTYPE html>
                                                 style={{ display: 'none' }}
                                             />
                                             
-                                            <div className="space-y-4">
+                                            <div className="space-y-3 sm:space-y-4">
                                                 <button
                                                     onClick={() => fileInputRef.current && fileInputRef.current.click()}
-                                                    className="w-full bg-purple-500 text-white py-4 px-6 rounded-full font-semibold hover:bg-purple-600 transition-all text-lg shadow-lg flex items-center justify-center gap-3"
+                                                    className="w-full bg-purple-500 text-white py-4 px-6 rounded-full font-semibold hover:bg-purple-600 transition-all text-base sm:text-lg shadow-lg flex items-center justify-center gap-3"
                                                 >
                                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="flex-shrink-0">
                                                         <path d="M12 15.5c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3z"/>
@@ -852,7 +834,7 @@ const resetGame = () => {<!DOCTYPE html>
                                                 
                                                 <button
                                                     onClick={stopCamera}
-                                                    className="w-full bg-gray-500 text-white py-4 px-6 rounded-full font-semibold hover:bg-gray-600 transition-all text-lg"
+                                                    className="w-full bg-gray-500 text-white py-4 px-6 rounded-full font-semibold hover:bg-gray-600 transition-all text-base sm:text-lg"
                                                 >
                                                     Cancel
                                                 </button>
@@ -863,7 +845,7 @@ const resetGame = () => {<!DOCTYPE html>
                             </div>
                         )}
 
-                        {/* Bingo Grid - Mobile Optimized Typography */}
+                        {/* Bingo Grid */}
                         {(!cameraIndex && !previewIndex && !showNameInput) && (
                             <div className="p-4 sm:p-6 pb-6 sm:pb-8">
                                 <div className="grid grid-cols-3 gap-2 sm:gap-3">
@@ -874,7 +856,6 @@ const resetGame = () => {<!DOCTYPE html>
                                                 ${completedBoxes.has(index) ? 'border-green-500 bg-green-50 cursor-pointer hover:border-green-600 shadow-lg' : 'border-gray-300 bg-gray-50 hover:border-purple-400 hover:bg-purple-50 hover:shadow-md'}`}
                                             onClick={() => completedBoxes.has(index) && setPreviewIndex(index)}
                                         >
-                                            {/* Photo background */}
                                             {(completedBoxes.has(index) && photos[index]) && (
                                                 <img
                                                     src={photos[index]}
@@ -883,28 +864,24 @@ const resetGame = () => {<!DOCTYPE html>
                                                 />
                                             )}
                                             
-                                            {/* Check mark */}
                                             {completedBoxes.has(index) && (
                                                 <div className="absolute top-1 right-1 sm:top-2 sm:right-2 bg-green-500 rounded-full p-1 text-white text-xs z-10">
                                                     ✓
                                                 </div>
                                             )}
 
-                                            {/* Name label */}
                                             {(completedBoxes.has(index) && names[index]) && (
                                                 <div className="absolute bottom-1 left-1 right-1 bg-black/70 text-white text-xs px-1 sm:px-2 py-1 rounded text-center truncate z-10">
                                                     {names[index]}
                                                 </div>
                                             )}
 
-                                            {/* Category text - mobile optimized */}
                                             <div className="flex-1 flex items-center justify-center p-1">
                                                 <span className={`text-xs sm:text-sm font-medium z-10 leading-tight text-center ${completedBoxes.has(index) ? 'text-white bg-black/50 px-2 py-1 rounded' : 'text-gray-700'}`}>
                                                     {category}
                                                 </span>
                                             </div>
 
-                                            {/* Camera button - improved alignment */}
                                             {!completedBoxes.has(index) && (
                                                 <div className="flex justify-center mt-1 sm:mt-2">
                                                     <button
