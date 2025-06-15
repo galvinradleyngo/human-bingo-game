@@ -470,13 +470,16 @@
 
             const saveGame = async () => {
                 const validCategories = customCategories.filter(cat => cat.trim() !== '');
+                
+                // Check minimum categories requirement
                 if (validCategories.length < 4) {
-                    showToast('Please add at least 4 categories for your game.', 'error');
+                    // Show specific popup warning
+                    alert('⚠️ Minimum 4 Categories Required\n\nYou currently have ' + validCategories.length + ' categories.\nPlease add at least ' + (4 - validCategories.length) + ' more categories to create your game.\n\nTip: Try adding categories like:\n• "Has traveled abroad"\n• "Plays a musical instrument"\n• "Loves coffee"\n• "Has a pet"');
                     return;
                 }
 
                 if (!creatorPassword.trim()) {
-                    showToast('Please enter a password to secure your custom game.', 'error');
+                    alert('🔑 Password Required\n\nPlease enter a password to secure your custom game.\nYou\'ll need this password to edit your game later.');
                     return;
                 }
 
