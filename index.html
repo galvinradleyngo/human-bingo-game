@@ -79,7 +79,7 @@
             const fileInputRef = useRef(null);
             const completedCount = completedBoxes.size;
 
-            // Load game on component mount
+            // Load game on component mount - Fixed version
             useEffect(() => {
                 const loadGameFromURL = async () => {
                     setIsLoading(true);
@@ -87,36 +87,43 @@
                         const urlParams = new URLSearchParams(window.location.search);
                         const gameIdParam = urlParams.get('game');
                         
+                        // First, always try to load saved progress
+                        const currentGameId = gameIdParam || 'default';
+                        loadSavedProgress(currentGameId);
+                        
                         if (gameIdParam) {
                             // Load custom game from Firebase
-                            const gameDoc = await db.collection('games').doc(gameIdParam).get();
-                            if (gameDoc.exists) {
-                                const gameData = gameDoc.data();
-                                setGameId(gameIdParam);
-                                setIsCustomGame(true);
-                                setGameTitle(gameData.title || 'Custom Human Bingo');
-                                setGameDescription(gameData.description || 'Custom selfie bingo game!');
-                                setCategories(gameData.categories || defaultCategories);
-                                
-                                // Load saved progress AFTER setting up the game
-                                loadSavedProgress(gameIdParam);
-                                showToast('Custom game loaded successfully!', 'success');
-                            } else {
-                                showToast('Custom game not found', 'error');
-                                // Still try to load any saved progress for this game ID
-                                loadSavedProgress(gameIdParam);
+                            try {
+                                const gameDoc = await db.collection('games').doc(gameIdParam).get();
+                                if (gameDoc.exists) {
+                                    const gameData = gameDoc.data();
+                                    setGameId(gameIdParam);
+                                    setIsCustomGame(true);
+                                    
+                                    // Only set game config if we don't have saved data
+                                    const saved = localStorage.getItem(`humanBingo_${gameIdParam}`);
+                                    if (!saved || !JSON.parse(saved).gameTitle) {
+                                        setGameTitle(gameData.title || 'Custom Human Bingo');
+                                        setGameDescription(gameData.description || 'Custom selfie bingo game!');
+                                        setCategories(gameData.categories || defaultCategories);
+                                    }
+                                    
+                                    showToast('Custom game loaded successfully!', 'success');
+                                } else {
+                                    showToast('Custom game not found', 'error');
+                                }
+                            } catch (error) {
+                                console.log('Firebase error:', error);
+                                showToast('Could not load custom game', 'error');
                             }
                         } else {
-                            // Load default game progress
-                            loadSavedProgress('default');
+                            // Default game - ensure we're in default state
+                            setGameId(null);
+                            setIsCustomGame(false);
                         }
                     } catch (error) {
-                        console.log('Could not load custom game:', error);
-                        // Always try to load saved progress even if Firebase fails
-                        const urlParams = new URLSearchParams(window.location.search);
-                        const gameIdParam = urlParams.get('game');
-                        loadSavedProgress(gameIdParam || 'default');
-                        showToast('Could not load custom game', 'error');
+                        console.log('Could not load game:', error);
+                        loadSavedProgress('default');
                     } finally {
                         setIsLoading(false);
                     }
@@ -160,29 +167,33 @@
                     const saved = localStorage.getItem(`humanBingo_${currentGameId}`);
                     if (saved) {
                         const progressData = JSON.parse(saved);
-                        console.log('Loading saved progress:', progressData); // Debug log
+                        console.log('Loading saved progress for:', currentGameId, progressData); // Debug log
                         
-                        // Load progress regardless of timestamp to persist data across refreshes
-                        if (progressData.completedBoxes) {
-                            setCompletedBoxes(new Set(progressData.completedBoxes));
-                        }
-                        if (progressData.photos) {
-                            setPhotos(progressData.photos);
-                        }
-                        if (progressData.names) {
-                            setNames(progressData.names);
-                        }
+                        // Always load user progress data
+                        setCompletedBoxes(new Set(progressData.completedBoxes || []));
+                        setPhotos(progressData.photos || {});
+                        setNames(progressData.names || {});
                         
-                        // Only restore game settings if they exist and we're not already loading a custom game
-                        if (progressData.categories && !window.location.search.includes('game=')) {
+                        // Load game settings if available
+                        if (progressData.categories) {
                             setCategories(progressData.categories);
                         }
-                        if (progressData.gameTitle && !window.location.search.includes('game=')) {
+                        if (progressData.gameTitle) {
                             setGameTitle(progressData.gameTitle);
                         }
-                        if (progressData.gameDescription && !window.location.search.includes('game=')) {
+                        if (progressData.gameDescription) {
                             setGameDescription(progressData.gameDescription);
                         }
+                        if (progressData.gameId) {
+                            setGameId(progressData.gameId);
+                        }
+                        if (progressData.isCustomGame !== undefined) {
+                            setIsCustomGame(progressData.isCustomGame);
+                        }
+                        
+                        console.log('Progress loaded successfully');
+                    } else {
+                        console.log('No saved progress found for:', currentGameId);
                     }
                 } catch (error) {
                     console.log('Could not load saved progress:', error);
@@ -244,7 +255,18 @@
                 try {
                     const currentGameId = gameId || 'default';
                     localStorage.removeItem(`humanBingo_${currentGameId}`);
-                    console.log('Game reset - localStorage cleared'); // Debug log
+                    console.log('Game reset - localStorage cleared for:', currentGameId); // Debug log
+                    
+                    // If we're in a custom game, go back to default
+                    if (isCustomGame) {
+                        setGameId(null);
+                        setIsCustomGame(false);
+                        setGameTitle('Human Bingo Selfie');
+                        setGameDescription('Take selfies with people to complete your bingo!');
+                        setCategories(defaultCategories);
+                        window.history.pushState({}, '', window.location.pathname); // Remove URL params
+                    }
+                    
                     showToast('Game progress cleared!', 'success');
                 } catch (error) {
                     console.log('Could not clear saved progress:', error);
