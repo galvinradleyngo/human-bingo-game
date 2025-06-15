@@ -79,101 +79,83 @@
             const fileInputRef = useRef(null);
             const completedCount = completedBoxes.size;
 
-            // Load game on component mount - Enhanced debugging
+            // Load game on component mount - SIMPLIFIED VERSION
             useEffect(() => {
                 const loadGameFromURL = async () => {
-                    console.log('🔄 Starting to load game...');
                     setIsLoading(true);
                     
                     const urlParams = new URLSearchParams(window.location.search);
                     const gameIdParam = urlParams.get('game');
                     const currentGameId = gameIdParam || 'default';
                     
-                    console.log('🎯 Game ID:', currentGameId);
-                    console.log('🔍 Checking localStorage for key:', `humanBingo_${currentGameId}`);
+                    // FIRST: Load saved progress (this should always work)
+                    loadSavedProgress(currentGameId);
                     
-                    // Always load saved progress first
-                    const saved = localStorage.getItem(`humanBingo_${currentGameId}`);
-                    console.log('💾 Raw localStorage data:', saved);
-                    
-                    if (saved) {
+                    // SECOND: If it's a custom game, load from Firebase but DON'T override saved progress
+                    if (gameIdParam) {
                         try {
-                            const progressData = JSON.parse(saved);
-                            console.log('✅ Parsed saved data:', progressData);
-                            
-                            // Set state with saved data
-                            if (progressData.completedBoxes && progressData.completedBoxes.length > 0) {
-                                console.log('📋 Restoring completed boxes:', progressData.completedBoxes);
-                                setCompletedBoxes(new Set(progressData.completedBoxes));
-                            }
-                            if (progressData.photos && Object.keys(progressData.photos).length > 0) {
-                                console.log('📸 Restoring photos:', Object.keys(progressData.photos));
-                                setPhotos(progressData.photos);
-                            }
-                            if (progressData.names && Object.keys(progressData.names).length > 0) {
-                                console.log('👤 Restoring names:', progressData.names);
-                                setNames(progressData.names);
-                            }
-                            if (progressData.categories) {
-                                console.log('📝 Restoring categories');
-                                setCategories(progressData.categories);
-                            }
-                            if (progressData.gameTitle) {
-                                console.log('🎮 Restoring game title:', progressData.gameTitle);
-                                setGameTitle(progressData.gameTitle);
-                            }
-                            if (progressData.gameDescription) {
-                                setGameDescription(progressData.gameDescription);
-                            }
-                            if (progressData.gameId !== undefined) {
-                                setGameId(progressData.gameId);
-                            }
-                            if (progressData.isCustomGame !== undefined) {
-                                setIsCustomGame(progressData.isCustomGame);
-                            }
-                            
-                            console.log('✅ Data restoration complete');
-                        } catch (error) {
-                            console.log('❌ Error parsing saved data:', error);
-                        }
-                    } else {
-                        console.log('📭 No saved data found, loading fresh');
-                        
-                        if (gameIdParam) {
-                            try {
-                                console.log('🔥 Loading from Firebase:', gameIdParam);
-                                const gameDoc = await db.collection('games').doc(gameIdParam).get();
-                                if (gameDoc.exists) {
-                                    const gameData = gameDoc.data();
-                                    setGameId(gameIdParam);
-                                    setIsCustomGame(true);
+                            const gameDoc = await db.collection('games').doc(gameIdParam).get();
+                            if (gameDoc.exists) {
+                                const gameData = gameDoc.data();
+                                setGameId(gameIdParam);
+                                setIsCustomGame(true);
+                                
+                                // Only set these if we don't have saved data
+                                const saved = localStorage.getItem(`humanBingo_${gameIdParam}`);
+                                if (!saved) {
                                     setGameTitle(gameData.title || 'Custom Human Bingo');
                                     setGameDescription(gameData.description || 'Custom selfie bingo game!');
                                     setCategories(gameData.categories || defaultCategories);
-                                    showToast('Custom game loaded successfully!', 'success');
-                                } else {
-                                    showToast('Custom game not found', 'error');
                                 }
-                            } catch (error) {
-                                console.log('❌ Firebase error:', error);
-                                showToast('Could not load custom game', 'error');
+                                
+                                showToast('Custom game loaded successfully!', 'success');
+                            } else {
+                                showToast('Custom game not found', 'error');
                             }
-                        } else {
-                            console.log('🏠 Setting up default game');
-                            setGameId(null);
-                            setIsCustomGame(false);
-                            setGameTitle('Human Bingo Selfie');
-                            setGameDescription('Take selfies with people to complete your bingo!');
-                            setCategories(defaultCategories);
+                        } catch (error) {
+                            console.log('Firebase error:', error);
+                            showToast('Could not load custom game', 'error');
                         }
+                    } else {
+                        // Default game
+                        setGameId(null);
+                        setIsCustomGame(false);
                     }
                     
                     setIsLoading(false);
-                    console.log('✅ Game loading complete');
                 };
 
                 loadGameFromURL();
             }, []);
+
+            // Separate function to load saved progress - RESTORED
+            const loadSavedProgress = (currentGameId) => {
+                try {
+                    const saved = localStorage.getItem(`humanBingo_${currentGameId}`);
+                    console.log('Loading saved progress for:', currentGameId, saved ? 'FOUND' : 'NOT FOUND');
+                    
+                    if (saved) {
+                        const progressData = JSON.parse(saved);
+                        console.log('Restoring data:', {
+                            photos: Object.keys(progressData.photos || {}).length,
+                            completed: progressData.completedBoxes?.length || 0
+                        });
+                        
+                        // Restore all data
+                        setCompletedBoxes(new Set(progressData.completedBoxes || []));
+                        setPhotos(progressData.photos || {});
+                        setNames(progressData.names || {});
+                        
+                        if (progressData.categories) setCategories(progressData.categories);
+                        if (progressData.gameTitle) setGameTitle(progressData.gameTitle);
+                        if (progressData.gameDescription) setGameDescription(progressData.gameDescription);
+                        if (progressData.gameId !== undefined) setGameId(progressData.gameId);
+                        if (progressData.isCustomGame !== undefined) setIsCustomGame(progressData.isCustomGame);
+                    }
+                } catch (error) {
+                    console.log('Error loading saved progress:', error);
+                }
+            };
 
             // Save progress automatically
             useEffect(() => {
@@ -201,48 +183,10 @@
                         timestamp: Date.now()
                     };
                     
-                    console.log('💾 Attempting to save progress for:', currentGameId);
-                    console.log('📦 Data to save:', {
-                        completedBoxes: progressData.completedBoxes,
-                        photosCount: Object.keys(progressData.photos).length,
-                        namesCount: Object.keys(progressData.names).length,
-                        gameTitle: progressData.gameTitle
-                    });
-                    
-                    // Check if we have any meaningful data to save
-                    const hasData = progressData.completedBoxes.length > 0 || 
-                                   Object.keys(progressData.photos).length > 0 || 
-                                   Object.keys(progressData.names).length > 0;
-                    
-                    if (!hasData && currentGameId === 'default') {
-                        console.log('🔍 No meaningful data to save for default game, skipping...');
-                        return;
-                    }
-                    
-                    // Force save to localStorage
-                    const key = `humanBingo_${currentGameId}`;
-                    localStorage.setItem(key, JSON.stringify(progressData));
-                    
-                    // Verify it was saved
-                    const verification = localStorage.getItem(key);
-                    if (verification) {
-                        const parsed = JSON.parse(verification);
-                        console.log('✅ Progress saved successfully for:', currentGameId);
-                        console.log('✅ Verified save - photos:', Object.keys(parsed.photos).length);
-                    } else {
-                        console.log('❌ Failed to save progress for:', currentGameId);
-                    }
+                    localStorage.setItem(`humanBingo_${currentGameId}`, JSON.stringify(progressData));
+                    console.log('✅ Progress saved for:', currentGameId, 'Photos:', Object.keys(photos).length);
                 } catch (error) {
                     console.log('❌ Could not save progress:', error);
-                    
-                    // Check if localStorage is available
-                    try {
-                        localStorage.setItem('test', 'test');
-                        localStorage.removeItem('test');
-                        console.log('✅ localStorage is available');
-                    } catch (e) {
-                        console.log('❌ localStorage is not available:', e);
-                    }
                 }
             };
 
