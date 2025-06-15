@@ -8,6 +8,7 @@
     <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.5.3/qrcode.min.js"></script>
     
     <!-- Firebase v8 -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -103,6 +104,7 @@
             const [showPasswordPrompt, setShowPasswordPrompt] = useState(false);
             const [passwordInput, setPasswordInput] = useState('');
             const [passwordError, setPasswordError] = useState('');
+            const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
 
             // UI/UX improvements
             const [showMenu, setShowMenu] = useState(false);
@@ -501,6 +503,10 @@
                         setShareLink(currentShareLink);
                         setShowCustomizer(false);
                         setIsEditMode(false);
+                        
+                        // Generate QR code
+                        generateQRCode(currentShareLink);
+                        
                         showToast('Game updated successfully!', 'success');
                     } else {
                         const gameData = {
@@ -519,6 +525,9 @@
                         setIsCustomGame(true);
                         setShowCustomizer(false);
                         
+                        // Generate QR code
+                        generateQRCode(newShareLink);
+                        
                         window.history.pushState({}, '', newShareLink);
                         showToast('Custom game created successfully!', 'success');
                     }
@@ -532,6 +541,21 @@
             const copyShareLink = () => {
                 navigator.clipboard.writeText(shareLink);
                 showToast('Share link copied to clipboard!', 'success');
+            };
+
+            const generateQRCode = (url) => {
+                try {
+                    console.log('🔄 Generating QR code for:', url);
+                    
+                    // Use QR Server API - much more reliable
+                    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
+                    
+                    console.log('✅ QR code URL generated:', qrUrl);
+                    setQrCodeDataUrl(qrUrl);
+                } catch (error) {
+                    console.log('❌ Failed to generate QR code:', error);
+                    setQrCodeDataUrl('fallback');
+                }
             };
 
             return (
@@ -812,7 +836,25 @@
                                         <h3 className="font-bold text-gray-800 mb-4 text-2xl">
                                             Your Game is Ready!
                                         </h3>
+                                        
+                                        {/* QR Code Section */}
+                                        {qrCodeDataUrl && (
+                                            <div className="mb-4 p-4 bg-gray-50 rounded-xl border-2 border-gray-200">
+                                                <h4 className="font-semibold text-gray-700 mb-3">📱 Scan to Play</h4>
+                                                <div className="flex justify-center mb-3">
+                                                    <img 
+                                                        src={qrCodeDataUrl} 
+                                                        alt="QR Code for game link" 
+                                                        className="border border-gray-300 rounded-lg"
+                                                    />
+                                                </div>
+                                                <p className="text-xs text-gray-600">Scan with any smartphone camera</p>
+                                            </div>
+                                        )}
+                                        
+                                        {/* Share Link Section */}
                                         <div className="mb-4 p-4 bg-gray-50 rounded-xl border-2 border-gray-200">
+                                            <h4 className="font-semibold text-gray-700 mb-3">🔗 Share Link</h4>
                                             <div className="flex gap-2 mb-3">
                                                 <input 
                                                     type="text" 
@@ -857,7 +899,10 @@
                                             </ul>
                                         </div>
                                         <button
-                                            onClick={() => setShareLink('')}
+                                            onClick={() => {
+                                                setShareLink('');
+                                                setQrCodeDataUrl('');
+                                            }}
                                             className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-4 px-6 rounded-full font-semibold hover:from-purple-600 hover:to-pink-600 transition-all text-lg"
                                         >
                                             Start Playing!
