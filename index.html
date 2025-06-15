@@ -1,4 +1,18 @@
-<!DOCTYPE html>
+))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Footer */}
+                        <div className="bg-gray-100 px-6 py-4 text-center text-xs text-gray-600 border-t">
+                            <div className="mb-2">
+                                <p className="font-semibold text-gray-700">Human Bingo Selfie Game v2.0 Beta</p>
+                                <p>Created by <strong>Galvin Ngo</strong> of the <strong>Ateneo SALT Institute</strong></p>
+                                <p>Built with <strong>Claude AI</strong> • June 2025</p>
+                            </div>
+                            <div className="mb-2">
+                                <p className="text-green-700 font-medium">🔒 Privacy: Photos and game data stay on your device</p>
+                                <p className="text-<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -8,11 +22,29 @@
     <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Firebase v8 -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 </head>
 <body>
     <div id="root"></div>
     <script type="text/babel">
-        const { useState, useRef } = React;
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCKVkzw8bHYiaqwS6J0xrTplhnXYdEQwiQ",
+            authDomain: "human-bingo-game.firebaseapp.com",
+            projectId: "human-bingo-game",
+            storageBucket: "human-bingo-game.firebasestorage.app",
+            messagingSenderId: "133740150923",
+            appId: "1:133740150923:web:0266b47cb2cc4e0d1e548e"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        const { useState, useRef, useEffect } = React;
 
         function HumanBingoGame() {
             const defaultCategories = [
@@ -37,8 +69,91 @@
             const [nameInput, setNameInput] = useState('');
             const [pendingPhotoIndex, setPendingPhotoIndex] = useState(null);
 
+            // Customization states
+            const [showCustomizer, setShowCustomizer] = useState(false);
+            const [customCategories, setCustomCategories] = useState(['']);
+            const [gameTitle, setGameTitle] = useState('Human Bingo Selfie');
+            const [gameDescription, setGameDescription] = useState('Take selfies with people to complete your bingo!');
+            const [creatorPassword, setCreatorPassword] = useState('');
+            const [showPassword, setShowPassword] = useState(false);
+            const [shareLink, setShareLink] = useState('');
+            const [isCreatingLink, setIsCreatingLink] = useState(false);
+            const [gameId, setGameId] = useState(null);
+            const [isCustomGame, setIsCustomGame] = useState(false);
+            const [isEditMode, setIsEditMode] = useState(false);
+            const [showPasswordPrompt, setShowPasswordPrompt] = useState(false);
+            const [passwordInput, setPasswordInput] = useState('');
+            const [passwordError, setPasswordError] = useState('');
+
             const fileInputRef = useRef(null);
             const completedCount = completedBoxes.size;
+
+            // Load game on component mount
+            useEffect(() => {
+                const loadGameFromURL = async () => {
+                    try {
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const gameIdParam = urlParams.get('game');
+                        
+                        if (gameIdParam) {
+                            const gameDoc = await db.collection('games').doc(gameIdParam).get();
+                            if (gameDoc.exists) {
+                                const gameData = gameDoc.data();
+                                setGameId(gameIdParam);
+                                setIsCustomGame(true);
+                                setGameTitle(gameData.title || 'Custom Human Bingo');
+                                setGameDescription(gameData.description || 'Custom selfie bingo game!');
+                                setCategories(gameData.categories || defaultCategories);
+                                
+                                loadSavedProgress(gameIdParam);
+                            }
+                        } else {
+                            loadSavedProgress('default');
+                        }
+                    } catch (error) {
+                        console.log('Could not load custom game:', error);
+                        loadSavedProgress('default');
+                    }
+                };
+
+                loadGameFromURL();
+            }, []);
+
+            // Save progress automatically
+            useEffect(() => {
+                saveProgress();
+            }, [completedBoxes, photos, names]);
+
+            const saveProgress = () => {
+                try {
+                    const currentGameId = gameId || 'default';
+                    const progressData = {
+                        completedBoxes: Array.from(completedBoxes),
+                        photos: photos,
+                        names: names,
+                        timestamp: Date.now()
+                    };
+                    localStorage.setItem(`humanBingo_${currentGameId}`, JSON.stringify(progressData));
+                } catch (error) {
+                    console.log('Could not save progress:', error);
+                }
+            };
+
+            const loadSavedProgress = (currentGameId) => {
+                try {
+                    const saved = localStorage.getItem(`humanBingo_${currentGameId}`);
+                    if (saved) {
+                        const progressData = JSON.parse(saved);
+                        if (Date.now() - progressData.timestamp < 24 * 60 * 60 * 1000) {
+                            setCompletedBoxes(new Set(progressData.completedBoxes || []));
+                            setPhotos(progressData.photos || {});
+                            setNames(progressData.names || {});
+                        }
+                    }
+                } catch (error) {
+                    console.log('Could not load saved progress:', error);
+                }
+            };
 
             const startCamera = (index) => {
                 setCameraIndex(index);
@@ -91,6 +206,148 @@
                 setNameInput('');
                 setPendingPhotoIndex(null);
                 stopCamera();
+                
+                try {
+                    const currentGameId = gameId || 'default';
+                    localStorage.removeItem(`humanBingo_${currentGameId}`);
+                } catch (error) {
+                    console.log('Could not clear saved progress:', error);
+                }
+            };
+
+            const copyCurrentGameLink = () => {
+                const currentUrl = window.location.href;
+                navigator.clipboard.writeText(currentUrl);
+                alert('Game link copied to clipboard!');
+            };
+
+            // Edit mode functions
+            const promptForPassword = () => {
+                if (!isCustomGame || !gameId) {
+                    alert('This is not a custom game that can be edited.');
+                    return;
+                }
+                setPasswordInput('');
+                setPasswordError('');
+                setShowPasswordPrompt(true);
+            };
+
+            const verifyPassword = async () => {
+                if (!passwordInput.trim()) {
+                    setPasswordError('Please enter a password.');
+                    return;
+                }
+
+                try {
+                    const gameDoc = await db.collection('games').doc(gameId).get();
+                    if (gameDoc.exists) {
+                        const gameData = gameDoc.data();
+                        if (gameData.password === passwordInput.trim()) {
+                            setIsEditMode(true);
+                            setShowPasswordPrompt(false);
+                            setCreatorPassword(passwordInput.trim());
+                            
+                            setGameTitle(gameData.title || 'Custom Human Bingo');
+                            setGameDescription(gameData.description || 'Custom selfie bingo game!');
+                            setCustomCategories(gameData.categories || categories);
+                            
+                            openCustomizer();
+                        } else {
+                            setPasswordError('Incorrect password. Please try again.');
+                        }
+                    } else {
+                        setPasswordError('Game not found.');
+                    }
+                } catch (error) {
+                    setPasswordError('Error verifying password. Please try again.');
+                }
+            };
+
+            // Customization functions
+            const openCustomizer = () => {
+                setCustomCategories([...categories]);
+                setShowCustomizer(true);
+            };
+
+            const addCustomCategory = () => {
+                setCustomCategories([...customCategories, '']);
+            };
+
+            const removeCustomCategory = (index) => {
+                if (customCategories.length > 1) {
+                    setCustomCategories(customCategories.filter((_, i) => i !== index));
+                }
+            };
+
+            const updateCustomCategory = (index, value) => {
+                const newCategories = [...customCategories];
+                newCategories[index] = value;
+                setCustomCategories(newCategories);
+            };
+
+            const saveGame = async () => {
+                const validCategories = customCategories.filter(cat => cat.trim() !== '');
+                if (validCategories.length < 4) {
+                    alert('Please add at least 4 categories for your game.');
+                    return;
+                }
+
+                if (!creatorPassword.trim()) {
+                    alert('Please enter a password to secure your custom game.');
+                    return;
+                }
+
+                setIsCreatingLink(true);
+                
+                try {
+                    setCategories(validCategories);
+                    setCompletedBoxes(new Set());
+                    setPhotos({});
+                    setNames({});
+
+                    if (gameId && isEditMode) {
+                        const gameData = {
+                            title: gameTitle,
+                            description: gameDescription,
+                            categories: validCategories,
+                            password: creatorPassword,
+                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        };
+
+                        await db.collection('games').doc(gameId).update(gameData);
+                        const currentShareLink = `${window.location.origin}${window.location.pathname}?game=${gameId}`;
+                        setShareLink(currentShareLink);
+                        setShowCustomizer(false);
+                        setIsEditMode(false);
+                    } else {
+                        const gameData = {
+                            title: gameTitle,
+                            description: gameDescription,
+                            categories: validCategories,
+                            password: creatorPassword,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+                        };
+
+                        const docRef = await db.collection('games').add(gameData);
+                        const newShareLink = `${window.location.origin}${window.location.pathname}?game=${docRef.id}`;
+                        setShareLink(newShareLink);
+                        setGameId(docRef.id);
+                        setIsCustomGame(true);
+                        setShowCustomizer(false);
+                        
+                        window.history.pushState({}, '', newShareLink);
+                    }
+                } catch (error) {
+                    alert('Failed to save game: ' + error.message);
+                } finally {
+                    setIsCreatingLink(false);
+                }
+            };
+
+            const copyShareLink = () => {
+                navigator.clipboard.writeText(shareLink);
+                alert('Share link copied to clipboard!');
             };
 
             return (
@@ -99,18 +356,44 @@
                         
                         {/* Header */}
                         <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 text-white">
-                            <h1 className="text-2xl font-bold text-center mb-2">📸 Human Bingo Selfie</h1>
-                            <p className="text-center text-indigo-100 text-sm">Take selfies with people to complete your bingo!</p>
+                            <h1 className="text-2xl font-bold text-center mb-2">📸 {gameTitle}</h1>
+                            <p className="text-center text-indigo-100 text-sm">{gameDescription}</p>
                             <div className="mt-4 flex justify-between items-center">
                                 <span className="text-sm bg-white/20 px-3 py-1 rounded-full">
                                     {completedCount}/{categories.length} completed
                                 </span>
-                                <button
-                                    onClick={resetGame}
-                                    className="p-2 bg-white/20 rounded-full hover:bg-white/30 transition-colors"
-                                >
-                                    Reset
-                                </button>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={copyCurrentGameLink}
+                                        className="p-2 bg-yellow-500/20 border border-yellow-300/30 rounded-full hover:bg-yellow-500/30 transition-colors"
+                                        title="Copy game link"
+                                    >
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+                                            <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+                                        </svg>
+                                    </button>
+                                    <button
+                                        onClick={isCustomGame ? promptForPassword : openCustomizer}
+                                        title={isCustomGame ? "Edit this custom game" : "Customize your game"}
+                                        className="p-2 bg-green-500/20 border border-green-300/30 rounded-full hover:bg-green-500/30 transition-colors"
+                                    >
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                        </svg>
+                                    </button>
+                                    <button
+                                        onClick={resetGame}
+                                        className="p-2 bg-white/20 rounded-full hover:bg-white/30 transition-colors"
+                                        title="Reset game"
+                                    >
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                                            <path d="M3 3v5h5"/>
+                                        </svg>
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -131,7 +414,214 @@
                             </div>
                         )}
 
+                        {/* Customizer Modal */}
+                        {showCustomizer && (
+                            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+                                <div className="bg-white rounded-3xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                                    <h2 className="text-2xl font-bold text-center mb-6 text-gray-800">
+                                        {isEditMode ? '✏️ Edit Your Game' : '🎨 Customize Your Game'}
+                                    </h2>
+                                    
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Game Title</label>
+                                        <input
+                                            type="text"
+                                            value={gameTitle}
+                                            onChange={(e) => setGameTitle(e.target.value)}
+                                            className="w-full p-3 border-2 border-gray-300 rounded-xl focus:border-purple-500 focus:outline-none"
+                                            placeholder="Enter your game title"
+                                        />
+                                    </div>
+
+                                    <div className="mb-6">
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Game Description</label>
+                                        <input
+                                            type="text"
+                                            value={gameDescription}
+                                            onChange={(e) => setGameDescription(e.target.value)}
+                                            className="w-full p-3 border-2 border-gray-300 rounded-xl focus:border-purple-500 focus:outline-none"
+                                            placeholder="Enter your game description"
+                                        />
+                                    </div>
+
+                                    <div className="mb-6">
+                                        <div className="flex justify-between items-center mb-3">
+                                            <label className="block text-sm font-medium text-gray-700">Categories ({customCategories.length})</label>
+                                            <button
+                                                onClick={addCustomCategory}
+                                                className="bg-green-500 text-white p-2 rounded-full hover:bg-green-600 transition-colors"
+                                            >
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                    <path d="M5 12h14"/>
+                                                    <path d="M12 5v14"/>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                        <div className="space-y-3 max-h-60 overflow-y-auto">
+                                            {customCategories.map((category, index) => (
+                                                <div key={index} className="flex gap-2">
+                                                    <input
+                                                        type="text"
+                                                        value={category}
+                                                        onChange={(e) => updateCustomCategory(index, e.target.value)}
+                                                        className="flex-1 p-3 border-2 border-gray-300 rounded-xl focus:border-purple-500 focus:outline-none"
+                                                        placeholder={`Category ${index + 1}`}
+                                                    />
+                                                    {customCategories.length > 1 && (
+                                                        <button
+                                                            onClick={() => removeCustomCategory(index)}
+                                                            className="bg-red-500 text-white p-3 rounded-xl hover:bg-red-600 transition-colors"
+                                                        >
+                                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                                <path d="M3 6h18"/>
+                                                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                                                                <path d="M8 6V4c0-1 1-2 2-2h4c-1 0 2 1 2 2v2"/>
+                                                            </svg>
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="mb-6">
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Creator Password (for editing later)</label>
+                                        <div className="relative">
+                                            <input
+                                                type={showPassword ? 'text' : 'password'}
+                                                value={creatorPassword}
+                                                onChange={(e) => setCreatorPassword(e.target.value)}
+                                                className="w-full p-3 pr-12 border-2 border-gray-300 rounded-xl focus:border-purple-500 focus:outline-none"
+                                                placeholder="Enter a password to protect your game"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowPassword(!showPassword)}
+                                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                                            >
+                                                {showPassword ? '👁️' : '👁️‍🗨️'}
+                                            </button>
+                                        </div>
+                                        <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                                            <div className="flex items-start gap-2">
+                                                <div className="text-amber-600 mt-0.5">⚠️</div>
+                                                <div className="text-sm text-amber-800">
+                                                    <p className="font-medium mb-1">Important Notes:</p>
+                                                    <ul className="space-y-1 text-xs">
+                                                        <li>• Your custom game will be <strong>accessible for 7 days only</strong></li>
+                                                        <li>• You need this password to edit your game later</li>
+                                                        <li>• Save your password - it cannot be recovered</li>
+                                                        <li>• Share links will stop working after 7 days</li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex gap-3">
+                                        <button
+                                            onClick={() => {
+                                                setShowCustomizer(false);
+                                                setIsEditMode(false);
+                                            }}
+                                            className="flex-1 bg-gray-500 text-white py-3 px-4 rounded-full font-semibold hover:bg-gray-600 transition-colors"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={saveGame}
+                                            disabled={isCreatingLink}
+                                            className="flex-2 bg-blue-500 text-white py-3 px-6 rounded-full font-semibold hover:bg-blue-600 transition-colors disabled:opacity-50"
+                                        >
+                                            {isCreatingLink ? 'Saving...' : 'Save Game'}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Name Input Modal */}
+
+                        {/* Share Link Display - Center Screen Modal */}
+                        {shareLink && (
+                            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                                <div className="bg-white rounded-3xl p-8 max-w-lg w-full shadow-2xl">
+                                    <div className="text-center">
+                                        <div className="text-6xl mb-4">🎉</div>
+                                        <h3 className="font-bold text-gray-800 mb-4 text-2xl">
+                                            Your Game is Ready!
+                                        </h3>
+                                        <div className="mb-6 p-4 bg-gray-50 rounded-xl border-2 border-gray-200">
+                                            <div className="flex gap-2 mb-3">
+                                                <input 
+                                                    type="text" 
+                                                    value={shareLink} 
+                                                    readOnly 
+                                                    className="flex-1 p-3 bg-white border-2 border-gray-300 rounded-lg text-sm font-mono" 
+                                                />
+                                                <button
+                                                    onClick={copyShareLink}
+                                                    className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors font-semibold"
+                                                >
+                                                    📋 Copy
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div className="bg-amber-50 p-4 rounded-xl border border-amber-200 mb-6 text-left">
+                                            <h4 className="font-bold text-amber-800 mb-2">⚠️ Important:</h4>
+                                            <ul className="text-sm text-amber-700 space-y-1.5">
+                                                <li><strong>•</strong> You can edit this game using your password and this link</li>
+                                                <li><strong>•</strong> This custom game will be available for <strong>7 days only</strong></li>
+                                                <li><strong>•</strong> Share this link with others to let them play your custom game</li>
+                                                <li><strong>•</strong> Save your password - it cannot be recovered</li>
+                                            </ul>
+                                        </div>
+                                        <button
+                                            onClick={() => setShareLink('')}
+                                            className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 px-6 rounded-full font-semibold hover:from-purple-600 hover:to-pink-600 transition-all"
+                                        >
+                                            Start Playing!
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Password Prompt Modal */}
+                        {showPasswordPrompt && (
+                            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                                <div className="bg-white rounded-3xl p-6 max-w-sm w-full">
+                                    <h2 className="text-xl font-bold text-center mb-4 text-gray-800">🔒 Enter Creator Password</h2>
+                                    <p className="text-center text-sm text-gray-600 mb-4">Enter the password you used when creating this game to edit it.</p>
+                                    <input
+                                        type="password"
+                                        value={passwordInput}
+                                        onChange={(e) => {
+                                            setPasswordInput(e.target.value);
+                                            setPasswordError('');
+                                        }}
+                                        placeholder="Enter creator password"
+                                        className={`w-full p-3 border-2 rounded-xl text-center focus:outline-none mb-2 ${passwordError ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-purple-500'}`}
+                                        autoFocus={true}
+                                    />
+                                    {passwordError && <p className="text-red-500 text-sm text-center mb-4">{passwordError}</p>}
+                                    <div className="flex gap-3">
+                                        <button
+                                            onClick={() => setShowPasswordPrompt(false)}
+                                            className="flex-1 bg-gray-500 text-white py-3 px-4 rounded-full font-semibold hover:bg-gray-600 transition-colors"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={verifyPassword}
+                                            className="flex-1 bg-blue-500 text-white py-3 px-4 rounded-full font-semibold hover:bg-blue-600 transition-colors"
+                                        >
+                                            Verify
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                         {showNameInput && (
                             <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
                                 <div className="bg-white rounded-3xl p-6 max-w-sm w-full">
@@ -286,6 +776,25 @@
                                 </div>
                             </div>
                         )}
+
+                        {/* Footer */}
+                        <div className="bg-gray-100 px-6 py-4 text-center text-xs text-gray-600 border-t">
+                            <div className="mb-2">
+                                <p className="font-semibold text-gray-700">Human Bingo Selfie Game v2.0 Beta</p>
+                                <p>Created by <strong>Galvin Ngo</strong> of the <strong>Ateneo SALT Institute</strong></p>
+                                <p>Built with <strong>Claude AI</strong> • June 2025</p>
+                            </div>
+                            <div className="mb-2">
+                                <p className="text-green-700 font-medium">🔒 Privacy: Photos and game data stay on your device</p>
+                                <p className="text-gray-500">Only custom game settings are stored temporarily (7 days)</p>
+                            </div>
+                            <div className="flex items-center justify-center gap-1 text-gray-500">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                                </svg>
+                                <span>Licensed under Creative Commons (Non-Commercial)</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             );
