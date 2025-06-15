@@ -88,6 +88,7 @@
                         const gameIdParam = urlParams.get('game');
                         
                         if (gameIdParam) {
+                            // Load custom game from Firebase
                             const gameDoc = await db.collection('games').doc(gameIdParam).get();
                             if (gameDoc.exists) {
                                 const gameData = gameDoc.data();
@@ -97,17 +98,24 @@
                                 setGameDescription(gameData.description || 'Custom selfie bingo game!');
                                 setCategories(gameData.categories || defaultCategories);
                                 
+                                // Load saved progress AFTER setting up the game
                                 loadSavedProgress(gameIdParam);
                                 showToast('Custom game loaded successfully!', 'success');
                             } else {
                                 showToast('Custom game not found', 'error');
+                                // Still try to load any saved progress for this game ID
+                                loadSavedProgress(gameIdParam);
                             }
                         } else {
+                            // Load default game progress
                             loadSavedProgress('default');
                         }
                     } catch (error) {
                         console.log('Could not load custom game:', error);
-                        loadSavedProgress('default');
+                        // Always try to load saved progress even if Firebase fails
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const gameIdParam = urlParams.get('game');
+                        loadSavedProgress(gameIdParam || 'default');
                         showToast('Could not load custom game', 'error');
                     } finally {
                         setIsLoading(false);
@@ -117,10 +125,14 @@
                 loadGameFromURL();
             }, []);
 
-            // Save progress automatically - added categories, title, and description to dependency array
+            // Save progress automatically - debounced to avoid too many saves
             useEffect(() => {
-                saveProgress();
-            }, [completedBoxes, photos, names, categories, gameTitle, gameDescription]);
+                const timeoutId = setTimeout(() => {
+                    saveProgress();
+                }, 500); // Debounce by 500ms
+                
+                return () => clearTimeout(timeoutId);
+            }, [completedBoxes, photos, names, categories, gameTitle, gameDescription, gameId, isCustomGame]);
 
             const saveProgress = () => {
                 try {
@@ -132,9 +144,12 @@
                         categories: categories,
                         gameTitle: gameTitle,
                         gameDescription: gameDescription,
+                        gameId: gameId,
+                        isCustomGame: isCustomGame,
                         timestamp: Date.now()
                     };
                     localStorage.setItem(`humanBingo_${currentGameId}`, JSON.stringify(progressData));
+                    console.log('Progress saved:', progressData); // Debug log
                 } catch (error) {
                     console.log('Could not save progress:', error);
                 }
@@ -145,19 +160,27 @@
                     const saved = localStorage.getItem(`humanBingo_${currentGameId}`);
                     if (saved) {
                         const progressData = JSON.parse(saved);
-                        // Load progress regardless of timestamp to persist data across refreshes
-                        setCompletedBoxes(new Set(progressData.completedBoxes || []));
-                        setPhotos(progressData.photos || {});
-                        setNames(progressData.names || {});
+                        console.log('Loading saved progress:', progressData); // Debug log
                         
-                        // Also restore categories and game info if available
-                        if (progressData.categories) {
+                        // Load progress regardless of timestamp to persist data across refreshes
+                        if (progressData.completedBoxes) {
+                            setCompletedBoxes(new Set(progressData.completedBoxes));
+                        }
+                        if (progressData.photos) {
+                            setPhotos(progressData.photos);
+                        }
+                        if (progressData.names) {
+                            setNames(progressData.names);
+                        }
+                        
+                        // Only restore game settings if they exist and we're not already loading a custom game
+                        if (progressData.categories && !window.location.search.includes('game=')) {
                             setCategories(progressData.categories);
                         }
-                        if (progressData.gameTitle) {
+                        if (progressData.gameTitle && !window.location.search.includes('game=')) {
                             setGameTitle(progressData.gameTitle);
                         }
-                        if (progressData.gameDescription) {
+                        if (progressData.gameDescription && !window.location.search.includes('game=')) {
                             setGameDescription(progressData.gameDescription);
                         }
                     }
@@ -221,6 +244,8 @@
                 try {
                     const currentGameId = gameId || 'default';
                     localStorage.removeItem(`humanBingo_${currentGameId}`);
+                    console.log('Game reset - localStorage cleared'); // Debug log
+                    showToast('Game progress cleared!', 'success');
                 } catch (error) {
                     console.log('Could not clear saved progress:', error);
                 }
@@ -409,12 +434,12 @@
                             </div>
                         )}
 
-                        {/* Header */}
-                        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 text-white">
-                            <h1 className="text-2xl font-bold text-center mb-2">📸 {gameTitle}</h1>
-                            <p className="text-center text-indigo-100 text-sm">{gameDescription}</p>
+                        {/* Header - Mobile Optimized Typography */}
+                        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-4 sm:p-6 text-white">
+                            <h1 className="text-xl sm:text-2xl font-bold text-center mb-2">📸 {gameTitle}</h1>
+                            <p className="text-center text-indigo-100 text-sm sm:text-base">{gameDescription}</p>
                             <div className="mt-4 flex justify-between items-center">
-                                <span className="text-sm bg-white/20 px-3 py-1 rounded-full">
+                                <span className="text-xs sm:text-sm bg-white/20 px-3 py-1 rounded-full">
                                     {completedCount}/{categories.length} completed
                                 </span>
                                 <div className="flex gap-2">
@@ -459,16 +484,16 @@
                             {/* Remove the click outside to close menu section since menu is removed */}
                         </div>
 
-                        {/* Progress Bar */}
+                        {/* Progress Bar - Mobile Optimized Typography */}
                         {(!cameraIndex && !previewIndex && !showNameInput) && (
-                            <div className="bg-white border-b border-gray-200 px-6 py-4">
-                                <div className="bg-gray-200 rounded-full h-3 overflow-hidden">
+                            <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4">
+                                <div className="bg-gray-200 rounded-full h-2 sm:h-3 overflow-hidden">
                                     <div 
                                         className="bg-gradient-to-r from-purple-500 to-pink-500 h-full transition-all duration-500"
                                         style={{ width: `${(completedCount / categories.length) * 100}%` }}
                                     />
                                 </div>
-                                <p className="text-center text-xs text-gray-600 mt-2">
+                                <p className="text-center text-xs sm:text-sm text-gray-600 mt-2">
                                     {completedCount === 0 ? "Start by taking your first selfie!" :
                                      completedCount < categories.length ? "Keep going! Take more selfies and tap completed photos to view." :
                                      "Congratulations! You completed the selfie bingo!"}
@@ -773,14 +798,14 @@
                             </div>
                         )}
 
-                        {/* Bingo Grid */}
+                        {/* Bingo Grid - Mobile Optimized Typography */}
                         {(!cameraIndex && !previewIndex && !showNameInput) && (
-                            <div className="p-6 pb-8">
-                                <div className="grid grid-cols-3 gap-3">
+                            <div className="p-4 sm:p-6 pb-6 sm:pb-8">
+                                <div className="grid grid-cols-3 gap-2 sm:gap-3">
                                     {categories.map((category, index) => (
                                         <div
                                             key={index}
-                                            className={`relative border-2 rounded-xl p-3 flex flex-col justify-between text-center transition-all duration-300 min-h-[120px] transform hover:scale-105
+                                            className={`relative border-2 rounded-xl p-2 sm:p-3 flex flex-col justify-between text-center transition-all duration-300 min-h-[110px] sm:min-h-[120px] transform hover:scale-105
                                                 ${completedBoxes.has(index) ? 'border-green-500 bg-green-50 cursor-pointer hover:border-green-600 shadow-lg' : 'border-gray-300 bg-gray-50 hover:border-purple-400 hover:bg-purple-50 hover:shadow-md'}`}
                                             onClick={() => completedBoxes.has(index) && setPreviewIndex(index)}
                                         >
@@ -795,36 +820,36 @@
                                             
                                             {/* Check mark */}
                                             {completedBoxes.has(index) && (
-                                                <div className="absolute top-2 right-2 bg-green-500 rounded-full p-1 text-white text-xs z-10">
+                                                <div className="absolute top-1 right-1 sm:top-2 sm:right-2 bg-green-500 rounded-full p-1 text-white text-xs z-10">
                                                     ✓
                                                 </div>
                                             )}
 
                                             {/* Name label */}
                                             {(completedBoxes.has(index) && names[index]) && (
-                                                <div className="absolute bottom-1 left-1 right-1 bg-black/70 text-white text-xs px-2 py-1 rounded text-center truncate z-10">
+                                                <div className="absolute bottom-1 left-1 right-1 bg-black/70 text-white text-xs px-1 sm:px-2 py-1 rounded text-center truncate z-10">
                                                     {names[index]}
                                                 </div>
                                             )}
 
-                                            {/* Category text - top area */}
-                                            <div className="flex-1 flex items-center justify-center">
-                                                <span className={`text-xs font-medium z-10 ${completedBoxes.has(index) ? 'text-white bg-black/50 px-2 py-1 rounded' : 'text-gray-700'}`}>
+                                            {/* Category text - mobile optimized */}
+                                            <div className="flex-1 flex items-center justify-center p-1">
+                                                <span className={`text-xs sm:text-sm font-medium z-10 leading-tight text-center ${completedBoxes.has(index) ? 'text-white bg-black/50 px-2 py-1 rounded' : 'text-gray-700'}`}>
                                                     {category}
                                                 </span>
                                             </div>
 
                                             {/* Camera button - improved alignment */}
                                             {!completedBoxes.has(index) && (
-                                                <div className="flex justify-center mt-2">
+                                                <div className="flex justify-center mt-1 sm:mt-2">
                                                     <button
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             startCamera(index);
                                                         }}
-                                                        className="w-12 h-12 bg-purple-500 text-white rounded-full hover:bg-purple-600 transition-all z-10 shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center justify-center"
+                                                        className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-500 text-white rounded-full hover:bg-purple-600 transition-all z-10 shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center justify-center"
                                                     >
-                                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="flex-shrink-0">
+                                                        <svg width="16" height="16" className="sm:w-5 sm:h-5" viewBox="0 0 24 24" fill="currentColor">
                                                             <path d="M12 15.5c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3z"/>
                                                             <path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/>
                                                         </svg>
