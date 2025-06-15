@@ -30,6 +30,39 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
+        // Utility: Resize and compress image before saving to localStorage
+        function resizeImage(base64, maxSize = 600, quality = 0.7) {
+            return new Promise((resolve) => {
+                const img = new window.Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let { width, height } = img;
+
+                    // Resize maintaining aspect ratio
+                    if (width > height) {
+                        if (width > maxSize) {
+                            height = Math.round(height * (maxSize / width));
+                            width = maxSize;
+                        }
+                    } else {
+                        if (height > maxSize) {
+                            width = Math.round(width * (maxSize / height));
+                            height = maxSize;
+                        }
+                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    // Compress to JPEG
+                    const newBase64 = canvas.toDataURL('image/jpeg', quality);
+                    resolve(newBase64);
+                };
+                img.onerror = () => resolve(base64); // fallback
+                img.src = base64;
+            });
+        }
+
         const { useState, useRef, useEffect } = React;
 
         function HumanBingoGame() {
@@ -202,15 +235,16 @@
                 const file = event.target.files[0];
                 if (file && file.type.startsWith('image/')) {
                     const reader = new FileReader();
-                    reader.onload = (e) => {
-                        const newPhotos = { ...photos, [cameraIndex]: e.target.result };
+                    reader.onload = async (e) => {
+                        // Resize/compress before saving
+                        const resized = await resizeImage(e.target.result);
+                        const newPhotos = { ...photos, [cameraIndex]: resized };
                         const newCompletedBoxes = new Set([...completedBoxes, cameraIndex]);
                         
-                        // Update state
                         setPhotos(newPhotos);
                         setCompletedBoxes(newCompletedBoxes);
-                        
-                        // Force immediate save
+
+                        // Save immediately
                         const currentGameId = gameId || 'default';
                         const immediateProgressData = {
                             completedBoxes: Array.from(newCompletedBoxes),
@@ -223,14 +257,15 @@
                             isCustomGame: isCustomGame,
                             timestamp: Date.now()
                         };
-                        
+
                         try {
                             localStorage.setItem(`humanBingo_${currentGameId}`, JSON.stringify(immediateProgressData));
                             console.log('🚀 FORCE SAVED after photo upload:', Object.keys(newPhotos).length, 'photos');
                         } catch (error) {
+                            alert('⚠️ Could not save photo. Local storage quota exceeded. Try removing some photos or reset the game.');
                             console.log('❌ Force save failed:', error);
                         }
-                        
+
                         setPendingPhotoIndex(cameraIndex);
                         setShowNameInput(true);
                         setCameraIndex(null);
