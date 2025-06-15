@@ -202,6 +202,23 @@
                 event.target.value = '';
             };
 
+            const handleCameraCapture = () => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'image/*';
+                input.capture = 'environment';
+                input.onchange = handleFileInput;
+                input.click();
+            };
+
+            const handleGallerySelect = () => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'image/*';
+                input.onchange = handleFileInput;
+                input.click();
+            };
+
             const saveName = () => {
                 if (pendingPhotoIndex !== null) {
                     setNames(prev => ({ ...prev, [pendingPhotoIndex]: nameInput.trim() }));
