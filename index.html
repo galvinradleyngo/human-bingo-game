@@ -111,10 +111,6 @@
             const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
             const [isLoading, setIsLoading] = useState(false);
 
-            // Saved games UI
-            const [showSavedGamesModal, setShowSavedGamesModal] = useState(false);
-            const [savedGames, setSavedGames] = useState([]);
-
             const fileInputRef = useRef(null);
             const completedCount = completedBoxes.size;
 
@@ -166,102 +162,6 @@
 
                 loadGameFromURL();
             }, []);
-
-            const formatTimestamp = (ts) => {
-                try {
-                    if (!ts) return '';
-                    const d = new Date(ts);
-                    if (Number.isNaN(d.getTime())) return '';
-                    return d.toLocaleString();
-                } catch {
-                    return '';
-                }
-            };
-
-            const refreshSavedGames = () => {
-                try {
-                    const prefix = 'humanBingo_';
-                    const keys = [];
-                    for (let i = 0; i < localStorage.length; i++) {
-                        const key = localStorage.key(i);
-                        if (key && key.startsWith(prefix)) keys.push(key);
-                    }
-
-                    const games = keys
-                        .map((key) => {
-                            let data = null;
-                            try {
-                                data = JSON.parse(localStorage.getItem(key));
-                            } catch {
-                                data = null;
-                            }
-
-                            const id = key.slice(prefix.length);
-                            const title = data?.gameTitle || (id === 'default' ? 'Human Bingo Selfie' : 'Saved Game');
-                            const description = data?.gameDescription || '';
-                            const completed = Array.isArray(data?.completedBoxes) ? data.completedBoxes.length : 0;
-                            const total = Array.isArray(data?.categories) ? data.categories.length : (categories?.length || 0);
-                            const timestamp = data?.timestamp;
-
-                            return {
-                                storageKey: key,
-                                id,
-                                title,
-                                description,
-                                completed,
-                                total,
-                                timestamp,
-                                isCustomGame: !!data?.isCustomGame,
-                            };
-                        })
-                        .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-
-                    setSavedGames(games);
-                } catch (error) {
-                    console.log('Error refreshing saved games:', error);
-                    setSavedGames([]);
-                }
-            };
-
-            const openSavedGames = () => {
-                refreshSavedGames();
-                setShowSavedGamesModal(true);
-                setShowMenu(false);
-            };
-
-            const loadSavedGame = (game) => {
-                if (!game) return;
-
-                // Load state from localStorage for selected game id
-                loadSavedProgress(game.id);
-
-                // Update URL for custom games
-                if (game.id && game.id !== 'default') {
-                    window.history.pushState({}, '', `${window.location.pathname}?game=${game.id}`);
-                    setGameId(game.id);
-                    setIsCustomGame(true);
-                } else {
-                    window.history.pushState({}, '', window.location.pathname);
-                    setGameId(null);
-                    setIsCustomGame(false);
-                }
-
-                setShowSavedGamesModal(false);
-                showToast('Saved game loaded!', 'success');
-            };
-
-            const deleteSavedGame = (game) => {
-                if (!game) return;
-                const ok = window.confirm(`Delete saved game "${game.title}" (${game.id})? This cannot be undone.`);
-                if (!ok) return;
-                try {
-                    localStorage.removeItem(game.storageKey);
-                } catch (e) {
-                    console.log('Failed deleting saved game:', e);
-                }
-                refreshSavedGames();
-                showToast('Saved game deleted.', 'success');
-            };
 
             // Separate function to load saved progress - RESTORED
             const loadSavedProgress = (currentGameId) => {
@@ -573,6 +473,7 @@
                 
                 // Check minimum categories requirement
                 if (validCategories.length < 4) {
+                    // Show specific popup warning
                     alert('⚠️ Minimum 4 Categories Required\n\nYou currently have ' + validCategories.length + ' categories.\nPlease add at least ' + (4 - validCategories.length) + ' more categories to create your game.\n\nTip: Try adding categories like:\n• "Has traveled abroad"\n• "Plays a musical instrument"\n• "Loves coffee"\n• "Has a pet"');
                     return;
                 }
@@ -606,6 +507,7 @@
                         setShowCustomizer(false);
                         setIsEditMode(false);
                         
+                        // Generate QR code
                         generateQRCode(currentShareLink);
                         
                         showToast('Game updated successfully!', 'success');
@@ -626,6 +528,7 @@
                         setIsCustomGame(true);
                         setShowCustomizer(false);
                         
+                        // Generate QR code
                         generateQRCode(newShareLink);
                         
                         window.history.pushState({}, '', newShareLink);
@@ -645,11 +548,16 @@
 
             const generateQRCode = (url) => {
                 try {
+                    console.log('🔄 Generating QR code for:', url);
+                    
+                    // Use QR Server API - much more reliable
                     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
+                    
+                    console.log('✅ QR code URL generated:', qrUrl);
                     setQrCodeDataUrl(qrUrl);
                 } catch (error) {
-                    console.log('Failed to generate QR code:', error);
-                    setQrCodeDataUrl('');
+                    console.log('❌ Failed to generate QR code:', error);
+                    setQrCodeDataUrl('fallback');
                 }
             };
 
@@ -663,9 +571,11 @@
                                 toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
                             }`}>
                                 <div className="flex items-center gap-2">
-                                    <div className="text-xl">{toast.type === 'success' ? '✅' : '❌'}</div>
+                                    <div className="text-xl">
+                                        {toast.type === 'success' ? '✅' : '❌'}
+                                    </div>
                                     <p className="flex-1 font-medium">{toast.message}</p>
-                                    <button
+                                    <button 
                                         onClick={() => setToast({ show: false, message: '', type: 'success' })}
                                         className="text-white/80 hover:text-white"
                                     >
@@ -685,7 +595,7 @@
                             </div>
                         )}
 
-                        {/* Header */}
+                        {/* Header with Home Button */}
                         <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-4 sm:p-6 text-white">
                             <div className="flex items-center justify-center mb-2 relative">
                                 {(isCustomGame || gameTitle !== 'Human Bingo Selfie') && (
@@ -709,18 +619,6 @@
                                 </span>
                                 <div className="flex gap-2">
                                     <button
-                                        onClick={openSavedGames}
-                                        className="bg-white/20 p-2 rounded-full hover:bg-white/30 transition-colors"
-                                        title="Retrieve Saved Games"
-                                    >
-                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                            <path d="M19 21H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h11l5 5v9a2 2 0 0 1-2 2z"/>
-                                            <polyline points="17 21 17 13 7 13 7 21"/>
-                                            <polyline points="7 3 7 8 15 8"/>
-                                        </svg>
-                                    </button>
-
-                                    <button
                                         onClick={copyCurrentGameLink}
                                         className="bg-yellow-500 text-yellow-900 p-2 rounded-full font-semibold hover:bg-yellow-400 transition-all shadow-lg"
                                         title="Copy Link"
@@ -730,7 +628,7 @@
                                             <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
                                         </svg>
                                     </button>
-
+                                    
                                     <button
                                         onClick={isCustomGame ? promptForPassword : openCustomizer}
                                         className="p-2 bg-white/20 rounded-full hover:bg-white/30 transition-colors"
@@ -741,7 +639,7 @@
                                             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                                         </svg>
                                     </button>
-
+                                    
                                     <button
                                         onClick={resetGame}
                                         className="p-2 bg-white/20 rounded-full hover:bg-white/30 transition-colors"
@@ -756,94 +654,11 @@
                             </div>
                         </div>
 
-                        {/* Saved Games Modal */}
-                        {showSavedGamesModal && (
-                            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
-                                <div className="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <h3 className="text-xl font-bold text-gray-800">💾 Saved Games</h3>
-                                        <button
-                                            onClick={() => setShowSavedGamesModal(false)}
-                                            className="text-gray-500 hover:text-gray-800"
-                                            title="Close"
-                                        >
-                                            ✕
-                                        </button>
-                                    </div>
-
-                                    <div className="flex gap-2 mb-4">
-                                        <button
-                                            onClick={refreshSavedGames}
-                                            className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-xl font-semibold"
-                                        >
-                                            Refresh
-                                        </button>
-                                        <button
-                                            onClick={() => setShowSavedGamesModal(false)}
-                                            className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-xl font-semibold"
-                                        >
-                                            Done
-                                        </button>
-                                    </div>
-
-                                    {savedGames.length === 0 ? (
-                                        <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl text-gray-700">
-                                            No saved games found on this device.
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-3">
-                                            {savedGames.map((g) => (
-                                                <div
-                                                    key={g.storageKey}
-                                                    className="w-full text-left p-4 rounded-2xl border border-gray-200 hover:border-purple-300 hover:bg-purple-50 transition-colors"
-                                                >
-                                                    <div className="flex items-start justify-between gap-3">
-                                                        <button
-                                                            onClick={() => loadSavedGame(g)}
-                                                            className="text-left flex-1"
-                                                            title="Load this saved game"
-                                                        >
-                                                            <div className="font-bold text-gray-800">
-                                                                {g.title}{' '}
-                                                                <span className="font-normal text-gray-500">({g.id})</span>
-                                                            </div>
-                                                            {g.description && (
-                                                                <div className="text-sm text-gray-600 mt-1">{g.description}</div>
-                                                            )}
-                                                            <div className="text-xs text-gray-500 mt-2">
-                                                                {g.completed}/{g.total || '?'} completed
-                                                                {g.timestamp ? ` • Last saved: ${formatTimestamp(g.timestamp)}` : ''}
-                                                            </div>
-                                                        </button>
-
-                                                        <div className="flex flex-col gap-2">
-                                                            <button
-                                                                onClick={() => loadSavedGame(g)}
-                                                                className="text-sm text-purple-600 font-semibold"
-                                                            >
-                                                                Load →
-                                                            </button>
-                                                            <button
-                                                                onClick={() => deleteSavedGame(g)}
-                                                                className="text-sm text-red-600 font-semibold"
-                                                            >
-                                                                Delete
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-
                         {/* Progress Bar */}
                         {(!cameraIndex && !previewIndex && !showNameInput) && (
                             <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4">
                                 <div className="bg-gray-200 rounded-full h-2 sm:h-3 overflow-hidden">
-                                    <div
+                                    <div 
                                         className="bg-gradient-to-r from-purple-500 to-pink-500 h-full transition-all duration-500"
                                         style={{ width: `${(completedCount / categories.length) * 100}%` }}
                                     />
@@ -863,7 +678,7 @@
                                     <h2 className="text-2xl font-bold text-center mb-6 text-gray-800">
                                         {isEditMode ? '✏️ Edit Your Game' : '🎨 Customize Your Game'}
                                     </h2>
-
+                                    
                                     <div className="mb-4">
                                         <label className="block text-sm font-medium text-gray-700 mb-2">Game Title</label>
                                         <input
@@ -888,9 +703,7 @@
 
                                     <div className="mb-6">
                                         <div className="flex justify-between items-center mb-3">
-                                            <label className="block text-sm font-medium text-gray-700">
-                                                Categories ({customCategories.length})
-                                            </label>
+                                            <label className="block text-sm font-medium text-gray-700">Categories ({customCategories.length})</label>
                                             <button
                                                 onClick={addCustomCategory}
                                                 className="bg-green-500 text-white p-2 rounded-full hover:bg-green-600 transition-colors"
@@ -901,7 +714,6 @@
                                                 </svg>
                                             </button>
                                         </div>
-
                                         <div className="space-y-3 max-h-60 overflow-y-auto">
                                             {customCategories.map((category, index) => (
                                                 <div key={index} className="flex gap-2">
@@ -930,9 +742,7 @@
                                     </div>
 
                                     <div className="mb-6">
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Creator Password (for editing later)
-                                        </label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Creator Password (for editing later)</label>
                                         <div className="relative">
                                             <input
                                                 type={showPassword ? 'text' : 'password'}
@@ -1026,30 +836,34 @@
                                 <div className="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto">
                                     <div className="text-center">
                                         <div className="text-6xl mb-4">🎉</div>
-                                        <h3 className="font-bold text-gray-800 mb-4 text-2xl">Your Game is Ready!</h3>
-
+                                        <h3 className="font-bold text-gray-800 mb-4 text-2xl">
+                                            Your Game is Ready!
+                                        </h3>
+                                        
+                                        {/* QR Code Section */}
                                         {qrCodeDataUrl && (
                                             <div className="mb-4 p-4 bg-gray-50 rounded-xl border-2 border-gray-200">
                                                 <h4 className="font-semibold text-gray-700 mb-3">📱 Scan to Play</h4>
                                                 <div className="flex justify-center mb-3">
-                                                    <img
-                                                        src={qrCodeDataUrl}
-                                                        alt="QR Code for game link"
+                                                    <img 
+                                                        src={qrCodeDataUrl} 
+                                                        alt="QR Code for game link" 
                                                         className="border border-gray-300 rounded-lg"
                                                     />
                                                 </div>
                                                 <p className="text-xs text-gray-600">Scan with any smartphone camera</p>
                                             </div>
                                         )}
-
+                                        
+                                        {/* Share Link Section */}
                                         <div className="mb-4 p-4 bg-gray-50 rounded-xl border-2 border-gray-200">
                                             <h4 className="font-semibold text-gray-700 mb-3">🔗 Share Link</h4>
                                             <div className="flex gap-2 mb-3">
-                                                <input
-                                                    type="text"
-                                                    value={shareLink}
-                                                    readOnly
-                                                    className="flex-1 p-3 bg-white border-2 border-gray-300 rounded-lg text-sm font-mono"
+                                                <input 
+                                                    type="text" 
+                                                    value={shareLink} 
+                                                    readOnly 
+                                                    className="flex-1 p-3 bg-white border-2 border-gray-300 rounded-lg text-sm font-mono" 
                                                 />
                                                 <button
                                                     onClick={copyShareLink}
@@ -1059,7 +873,8 @@
                                                 </button>
                                             </div>
                                         </div>
-
+                                        
+                                        {/* Password Reminder - Highlighted */}
                                         {creatorPassword && (
                                             <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200 rounded-xl">
                                                 <div className="flex items-center gap-2 mb-2">
@@ -1076,7 +891,7 @@
                                                 </p>
                                             </div>
                                         )}
-
+                                        
                                         <div className="bg-amber-50 p-4 rounded-xl border border-amber-200 mb-6 text-left">
                                             <h4 className="font-bold text-amber-800 mb-2">⚠️ Important:</h4>
                                             <ul className="text-sm text-amber-700 space-y-1.5">
@@ -1086,7 +901,6 @@
                                                 <li><strong>•</strong> Your password cannot be recovered if lost</li>
                                             </ul>
                                         </div>
-
                                         <button
                                             onClick={() => {
                                                 setShareLink('');
@@ -1106,9 +920,7 @@
                             <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
                                 <div className="bg-white rounded-3xl p-6 max-w-sm w-full">
                                     <h2 className="text-xl font-bold text-center mb-4 text-gray-800">🔒 Enter Creator Password</h2>
-                                    <p className="text-center text-sm text-gray-600 mb-4">
-                                        Enter the password you used when creating this game to edit it.
-                                    </p>
+                                    <p className="text-center text-sm text-gray-600 mb-4">Enter the password you used when creating this game to edit it.</p>
                                     <input
                                         type="password"
                                         value={passwordInput}
@@ -1117,9 +929,7 @@
                                             setPasswordError('');
                                         }}
                                         placeholder="Enter creator password"
-                                        className={`w-full p-3 border-2 rounded-xl text-center focus:outline-none mb-2 ${
-                                            passwordError ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-purple-500'
-                                        }`}
+                                        className={`w-full p-3 border-2 rounded-xl text-center focus:outline-none mb-2 ${passwordError ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-purple-500'}`}
                                         autoFocus={true}
                                     />
                                     {passwordError && <p className="text-red-500 text-sm text-center mb-4">{passwordError}</p>}
@@ -1166,13 +976,13 @@
                                     <h2 className="text-lg font-semibold text-center">{categories[cameraIndex]}</h2>
                                     <p className="text-center text-sm text-indigo-100 mt-1">Add a photo for this category!</p>
                                 </div>
-
+                                
                                 <div className="flex-1 flex items-center justify-center p-4">
                                     <div className="text-center">
                                         <div className="bg-white rounded-2xl p-6 sm:p-8 max-w-sm w-full">
                                             <div className="text-6xl mb-4">📷</div>
                                             <p className="text-gray-700 mb-6 text-base sm:text-lg">Choose a photo</p>
-
+                                            
                                             <input
                                                 ref={fileInputRef}
                                                 type="file"
@@ -1180,7 +990,7 @@
                                                 onChange={handleFileInput}
                                                 style={{ display: 'none' }}
                                             />
-
+                                            
                                             <div className="space-y-3 sm:space-y-4">
                                                 <button
                                                     onClick={() => fileInputRef.current && fileInputRef.current.click()}
@@ -1192,7 +1002,7 @@
                                                     </svg>
                                                     Choose Photo
                                                 </button>
-
+                                                
                                                 <button
                                                     onClick={stopCamera}
                                                     className="w-full bg-gray-500 text-white py-4 px-6 rounded-full font-semibold hover:bg-gray-600 transition-all text-base sm:text-lg"
@@ -1224,7 +1034,7 @@
                                                     className="absolute inset-0 w-full h-full object-cover rounded-xl"
                                                 />
                                             )}
-
+                                            
                                             {completedBoxes.has(index) && (
                                                 <div className="absolute top-1 right-1 sm:top-2 sm:right-2 bg-green-500 rounded-full p-1 text-white text-xs z-10">
                                                     ✓
@@ -1238,9 +1048,7 @@
                                             )}
 
                                             <div className="flex-1 flex items-center justify-center p-1">
-                                                <span className={`text-xs sm:text-sm font-medium z-10 leading-tight text-center ${
-                                                    completedBoxes.has(index) ? 'text-white bg-black/50 px-2 py-1 rounded' : 'text-gray-700'
-                                                }`}>
+                                                <span className={`text-xs sm:text-sm font-medium z-10 leading-tight text-center ${completedBoxes.has(index) ? 'text-white bg-black/50 px-2 py-1 rounded' : 'text-gray-700'}`}>
                                                     {category}
                                                 </span>
                                             </div>
@@ -1279,10 +1087,7 @@
                                 <p className="text-gray-500">Only custom game settings are stored temporarily (7 days)</p>
                             </div>
                             <div className="mb-2">
-                                <p className="text-blue-700 font-medium">
-                                    💌 I would love to hear your feedback - please send them to
-                                    <a href="mailto:gngo@ateneo.edu" className="underline hover:text-blue-900"> gngo@ateneo.edu</a>
-                                </p>
+                                <p className="text-blue-700 font-medium">💌 I would love to hear your feedback - please send them to <a href="mailto:gngo@ateneo.edu" className="underline hover:text-blue-900">gngo@ateneo.edu</a></p>
                             </div>
                             <div className="flex items-center justify-center gap-1 text-gray-500">
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
