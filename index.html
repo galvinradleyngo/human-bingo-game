@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -119,6 +120,17 @@
             const fileInputRef = useRef(null);
             const completedCount = completedBoxes.size;
 
+            // IMPORTANT: always derive the storage id from URL first (source of truth),
+            // then fall back to state, then default. This prevents "custom game -> default"
+            // saves when gameId state isn't set yet.
+            const getEffectiveGameId = () => {
+                const urlParams = new URLSearchParams(window.location.search);
+                const gameIdParam = urlParams.get('game');
+                return gameIdParam || gameId || 'default';
+            };
+
+            const getStorageKey = (id) => `humanBingo_${id || 'default'}`;
+
             // Load game on component mount - SIMPLIFIED VERSION
             useEffect(() => {
                 const loadGameFromURL = async () => {
@@ -141,7 +153,7 @@
                                 setIsCustomGame(true);
 
                                 // Only set these if we don't have saved data
-                                const saved = localStorage.getItem(`humanBingo_${gameIdParam}`);
+                                const saved = localStorage.getItem(getStorageKey(gameIdParam));
                                 if (!saved) {
                                     setGameTitle(gameData.title || 'Custom Human Bingo');
                                     setGameDescription(gameData.description || 'Custom selfie bingo game!');
@@ -235,19 +247,24 @@
             const loadSavedGame = (game) => {
                 if (!game) return;
 
-                // Load state from localStorage for selected game id
-                loadSavedProgress(game.id);
-
-                // Update URL for custom games
+                // Update URL first so effective id is correct immediately
                 if (game.id && game.id !== 'default') {
                     window.history.pushState({}, '', `${window.location.pathname}?game=${game.id}`);
+                } else {
+                    window.history.pushState({}, '', window.location.pathname);
+                }
+
+                // Sync state
+                if (game.id && game.id !== 'default') {
                     setGameId(game.id);
                     setIsCustomGame(true);
                 } else {
-                    window.history.pushState({}, '', window.location.pathname);
                     setGameId(null);
                     setIsCustomGame(false);
                 }
+
+                // Load state from localStorage for selected game id
+                loadSavedProgress(game.id);
 
                 setShowSavedGamesModal(false);
                 showToast('Saved game loaded!', 'success');
@@ -271,7 +288,7 @@
             // Separate function to load saved progress - RESTORED
             const loadSavedProgress = (currentGameId) => {
                 try {
-                    const saved = localStorage.getItem(`humanBingo_${currentGameId}`);
+                    const saved = localStorage.getItem(getStorageKey(currentGameId));
                     console.log('Loading saved progress for:', currentGameId, saved ? 'FOUND' : 'NOT FOUND');
 
                     if (saved) {
@@ -292,7 +309,11 @@
                         if (progressData.gameId !== undefined) setGameId(progressData.gameId);
                         if (progressData.isCustomGame !== undefined) setIsCustomGame(progressData.isCustomGame);
                     } else {
-                        showToast('No saved data found for that game on this device.', 'error');
+                        // Only show toast if user explicitly tried to load something non-existent
+                        // (keeps initial boot from spamming errors)
+                        if (currentGameId && currentGameId !== 'default') {
+                            showToast('No saved data found for that game on this device.', 'error');
+                        }
                     }
                 } catch (error) {
                     console.log('Error loading saved progress:', error);
@@ -312,7 +333,7 @@
 
             const saveProgress = () => {
                 try {
-                    const currentGameId = gameId || 'default';
+                    const effectiveId = getEffectiveGameId();
                     const progressData = {
                         completedBoxes: Array.from(completedBoxes),
                         photos: photos,
@@ -320,13 +341,13 @@
                         categories: categories,
                         gameTitle: gameTitle,
                         gameDescription: gameDescription,
-                        gameId: gameId,
-                        isCustomGame: isCustomGame,
+                        gameId: (effectiveId === 'default' ? null : effectiveId),
+                        isCustomGame: (effectiveId !== 'default'),
                         timestamp: Date.now()
                     };
 
-                    localStorage.setItem(`humanBingo_${currentGameId}`, JSON.stringify(progressData));
-                    console.log('✅ Progress saved for:', currentGameId, 'Photos:', Object.keys(photos).length);
+                    localStorage.setItem(getStorageKey(effectiveId), JSON.stringify(progressData));
+                    console.log('✅ Progress saved for:', effectiveId, 'Photos:', Object.keys(photos).length);
                 } catch (error) {
                     console.log('❌ Could not save progress:', error);
                 }
@@ -353,8 +374,8 @@
                         setPhotos(newPhotos);
                         setCompletedBoxes(newCompletedBoxes);
 
-                        // Save immediately
-                        const currentGameId = gameId || 'default';
+                        // Save immediately (IMPORTANT: use effective id, not state gameId)
+                        const effectiveId = getEffectiveGameId();
                         const immediateProgressData = {
                             completedBoxes: Array.from(newCompletedBoxes),
                             photos: newPhotos,
@@ -362,17 +383,23 @@
                             categories: categories,
                             gameTitle: gameTitle,
                             gameDescription: gameDescription,
-                            gameId: gameId,
-                            isCustomGame: isCustomGame,
+                            gameId: (effectiveId === 'default' ? null : effectiveId),
+                            isCustomGame: (effectiveId !== 'default'),
                             timestamp: Date.now()
                         };
 
                         try {
-                            localStorage.setItem(`humanBingo_${currentGameId}`, JSON.stringify(immediateProgressData));
-                            console.log('🚀 FORCE SAVED after photo upload:', Object.keys(newPhotos).length, 'photos');
+                            localStorage.setItem(getStorageKey(effectiveId), JSON.stringify(immediateProgressData));
+                            console.log('🚀 FORCE SAVED after photo upload for:', effectiveId, 'Photos:', Object.keys(newPhotos).length);
                         } catch (error) {
                             alert('⚠️ Could not save photo. Local storage quota exceeded. Try removing some photos or reset the game.');
                             console.log('❌ Force save failed:', error);
+                        }
+
+                        // Keep state aligned with effective id (prevents "revert" perception)
+                        if (effectiveId !== 'default') {
+                            setGameId(effectiveId);
+                            setIsCustomGame(true);
                         }
 
                         setPendingPhotoIndex(cameraIndex);
@@ -390,7 +417,7 @@
                     setNames(newNames);
 
                     // Force save with name added
-                    const currentGameId = gameId || 'default';
+                    const effectiveId = getEffectiveGameId();
                     const immediateProgressData = {
                         completedBoxes: Array.from(completedBoxes),
                         photos: photos,
@@ -398,14 +425,14 @@
                         categories: categories,
                         gameTitle: gameTitle,
                         gameDescription: gameDescription,
-                        gameId: gameId,
-                        isCustomGame: isCustomGame,
+                        gameId: (effectiveId === 'default' ? null : effectiveId),
+                        isCustomGame: (effectiveId !== 'default'),
                         timestamp: Date.now()
                     };
 
                     try {
-                        localStorage.setItem(`humanBingo_${currentGameId}`, JSON.stringify(immediateProgressData));
-                        console.log('🚀 FORCE SAVED after name input');
+                        localStorage.setItem(getStorageKey(effectiveId), JSON.stringify(immediateProgressData));
+                        console.log('🚀 FORCE SAVED after name input for:', effectiveId);
                     } catch (error) {
                         console.log('❌ Force save failed:', error);
                     }
@@ -419,7 +446,7 @@
             const skipName = () => {
                 if (pendingPhotoIndex !== null) {
                     // Force save without name
-                    const currentGameId = gameId || 'default';
+                    const effectiveId = getEffectiveGameId();
                     const immediateProgressData = {
                         completedBoxes: Array.from(completedBoxes),
                         photos: photos,
@@ -427,14 +454,14 @@
                         categories: categories,
                         gameTitle: gameTitle,
                         gameDescription: gameDescription,
-                        gameId: gameId,
-                        isCustomGame: isCustomGame,
+                        gameId: (effectiveId === 'default' ? null : effectiveId),
+                        isCustomGame: (effectiveId !== 'default'),
                         timestamp: Date.now()
                     };
 
                     try {
-                        localStorage.setItem(`humanBingo_${currentGameId}`, JSON.stringify(immediateProgressData));
-                        console.log('🚀 FORCE SAVED after skipping name');
+                        localStorage.setItem(getStorageKey(effectiveId), JSON.stringify(immediateProgressData));
+                        console.log('🚀 FORCE SAVED after skipping name for:', effectiveId);
                     } catch (error) {
                         console.log('❌ Force save failed:', error);
                     }
@@ -475,12 +502,12 @@
                 setPendingPhotoIndex(null);
                 stopCamera();
 
-                // Clear localStorage for ALL game types
+                // Clear localStorage for current effective game and default
                 try {
-                    const currentGameId = gameId || 'default';
-                    localStorage.removeItem(`humanBingo_${currentGameId}`);
-                    localStorage.removeItem(`humanBingo_default`);
-                    console.log('Cleared localStorage for:', currentGameId);
+                    const effectiveId = getEffectiveGameId();
+                    localStorage.removeItem(getStorageKey(effectiveId));
+                    localStorage.removeItem(getStorageKey('default'));
+                    console.log('Cleared localStorage for:', effectiveId);
                 } catch (error) {
                     console.log('Could not clear saved progress:', error);
                 }
@@ -616,6 +643,10 @@
                         // Generate QR code
                         generateQRCode(currentShareLink);
 
+                        // Ensure URL is correct after edit
+                        window.history.pushState({}, '', currentShareLink);
+                        setIsCustomGame(true);
+
                         showToast('Game updated successfully!', 'success');
                     } else {
                         const gameData = {
@@ -638,6 +669,25 @@
                         generateQRCode(newShareLink);
 
                         window.history.pushState({}, '', newShareLink);
+
+                        // Create an empty save slot immediately so photo saves never fall back to default
+                        try {
+                            const newProgress = {
+                                completedBoxes: [],
+                                photos: {},
+                                names: {},
+                                categories: validCategories,
+                                gameTitle: gameTitle,
+                                gameDescription: gameDescription,
+                                gameId: docRef.id,
+                                isCustomGame: true,
+                                timestamp: Date.now()
+                            };
+                            localStorage.setItem(getStorageKey(docRef.id), JSON.stringify(newProgress));
+                        } catch (e) {
+                            console.log('Could not precreate save slot:', e);
+                        }
+
                         showToast('Custom game created successfully!', 'success');
                     }
                 } catch (error) {
@@ -724,7 +774,7 @@
                                     {completedCount}/{categories.length} completed
                                 </span>
                                 <div className="flex gap-2">
-                                    {/* NEW: Retrieve Saved Games button */}
+                                    {/* Retrieve Saved Games button */}
                                     <button
                                         onClick={openSavedGames}
                                         className="bg-white/20 p-2 rounded-full hover:bg-white/30 transition-colors"
@@ -773,7 +823,7 @@
                             </div>
                         </div>
 
-                        {/* NEW: Saved Games Modal */}
+                        {/* Saved Games Modal */}
                         {showSavedGamesModal && (
                             <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
                                 <div className="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto">
@@ -1306,3 +1356,4 @@
     </script>
 </body>
 </html>
+```
