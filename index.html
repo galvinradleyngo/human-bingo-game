@@ -1,52 +1,272 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Human Bingo Game</title>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Human Bingo Game</title>
+
+  <!-- Simple styling for the modal -->
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; padding: 20px; }
+    #savedGamesButton { margin-top: 12px; padding: 10px 14px; cursor: pointer; }
+    #savedGamesModal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    #savedGamesModal .modal-content {
+      background: #fff;
+      width: min(720px, 95vw);
+      max-height: 85vh;
+      overflow: auto;
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+    }
+    #savedGamesModal h2 { margin: 0 0 10px 0; }
+    #savedGamesList { list-style: none; padding: 0; margin: 10px 0; }
+    #savedGamesList li {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px;
+      border: 1px solid #e6e6e6;
+      border-radius: 10px;
+      margin-bottom: 8px;
+    }
+    .game-meta { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .game-title { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .game-sub { font-size: 12px; color: #555; }
+    .btn-row { display: flex; gap: 8px; flex-shrink: 0; }
+    .btn { padding: 8px 10px; cursor: pointer; border-radius: 8px; border: 1px solid #ddd; background: #f7f7f7; }
+    .btn:hover { background: #efefef; }
+    .btn-danger { border-color: #f1b7b7; background: #ffeaea; }
+    .btn-danger:hover { background: #ffdcdc; }
+    .btn-primary { border-color: #b6d1ff; background: #e9f1ff; }
+    .btn-primary:hover { background: #dbe9ff; }
+    .top-actions { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+    .hint { font-size: 12px; color: #666; margin: 0; }
+    .empty { padding: 12px; background: #f7f7f7; border-radius: 10px; border: 1px dashed #ddd; color: #555; }
+  </style>
 </head>
+
 <body>
-    <div id="app"></div>
-    <button id="savedGamesButton">Saved Games</button>
-    <div id="savedGamesModal" style="display:none;">
-        <h2>Saved Games</h2>
-        <ul id="savedGamesList"></ul>
-        <button id="closeModalButton">Close</button>
+  <div id="app"></div>
+
+  <!-- Button to open Saved Games -->
+  <button id="savedGamesButton" type="button">Saved Games</button>
+
+  <!-- Modal -->
+  <div id="savedGamesModal" role="dialog" aria-modal="true" aria-labelledby="savedGamesTitle">
+    <div class="modal-content">
+      <h2 id="savedGamesTitle">Saved Games</h2>
+      <p class="hint">
+        This list is read from your browser’s localStorage keys that start with <code>humanBingo_</code>.
+      </p>
+
+      <div class="top-actions">
+        <button id="refreshSavedGamesButton" type="button" class="btn">Refresh</button>
+        <button id="closeModalButton" type="button" class="btn">Close</button>
+      </div>
+
+      <ul id="savedGamesList"></ul>
     </div>
-    <script src="path/to/react.js"></script>
-    <script>
-        // Logic to manage saved games
-        const savedGamesButton = document.getElementById('savedGamesButton');
-        const savedGamesModal = document.getElementById('savedGamesModal');
-        const savedGamesList = document.getElementById('savedGamesList');
+  </div>
 
-        savedGamesButton.addEventListener('click', () => {
-            savedGamesModal.style.display = 'block';
-            loadSavedGames();
-        });
+  <!-- NOTE:
+       Your original file had `<script src="path/to/react.js"></script>`.
+       That path will 404 unless you really host React there.
+       Since your current saved-games UI is plain JS, we remove that dependency. -->
 
-        document.getElementById('closeModalButton').addEventListener('click', () => {
-            savedGamesModal.style.display = 'none';
-        });
+  <script>
+    // Saved Games UI (localStorage-based)
+    const savedGamesButton = document.getElementById('savedGamesButton');
+    const savedGamesModal = document.getElementById('savedGamesModal');
+    const savedGamesList = document.getElementById('savedGamesList');
+    const closeModalButton = document.getElementById('closeModalButton');
+    const refreshSavedGamesButton = document.getElementById('refreshSavedGamesButton');
 
-        function loadSavedGames() {
-            // Load localStorage keys starting with 'humanBingo_'
-            const keys = Object.keys(localStorage).filter(key => key.startsWith('humanBingo_'));
-            savedGamesList.innerHTML = '';
-            keys.forEach(key => {
-                const li = document.createElement('li');
-                li.textContent = key;
-                const deleteButton = document.createElement('button');
-                deleteButton.textContent = 'Delete';
-                deleteButton.onclick = () => {
-                    localStorage.removeItem(key);
-                    loadSavedGames();
-                };
-                li.appendChild(deleteButton);
-                savedGamesList.appendChild(li);
-            });
+    function formatTimestamp(ts) {
+      try {
+        if (!ts) return '';
+        const d = new Date(ts);
+        if (Number.isNaN(d.getTime())) return '';
+        return d.toLocaleString();
+      } catch {
+        return '';
+      }
+    }
+
+    function parseSavedGame(key) {
+      // key is like: humanBingo_<id>
+      const prefix = 'humanBingo_';
+      const id = key.startsWith(prefix) ? key.slice(prefix.length) : key;
+
+      let data = null;
+      try {
+        data = JSON.parse(localStorage.getItem(key));
+      } catch {
+        data = null;
+      }
+
+      const title = (data && data.gameTitle) ? data.gameTitle : (id === 'default' ? 'Human Bingo (Default)' : 'Saved Game');
+      const description = (data && data.gameDescription) ? data.gameDescription : '';
+      const completed = Array.isArray(data && data.completedBoxes) ? data.completedBoxes.length : 0;
+      const total = Array.isArray(data && data.categories) ? data.categories.length : undefined;
+      const timestamp = data && data.timestamp;
+
+      return { key, id, title, description, completed, total, timestamp, raw: data };
+    }
+
+    function loadSavedProgress(gameId) {
+      // Minimal, safe implementation:
+      // We load the saved JSON and expose it for your app to consume.
+      // If/when you restore the full React game, replace this with your real
+      // state restore logic (setCategories, setPhotos, etc.).
+      const storageKey = `humanBingo_${gameId}`;
+      const saved = localStorage.getItem(storageKey);
+
+      if (!saved) {
+        alert(`No saved data found for: ${storageKey}`);
+        return;
+      }
+
+      let progressData;
+      try {
+        progressData = JSON.parse(saved);
+      } catch (e) {
+        alert(`Saved data for ${storageKey} is corrupted (invalid JSON).`);
+        return;
+      }
+
+      // Store it somewhere accessible (optional)
+      window.__HUMAN_BINGO_LOADED_SAVE__ = { gameId, progressData };
+
+      // Also log for debugging
+      console.log('Loaded saved progress:', gameId, progressData);
+
+      alert(`Loaded saved game: ${gameId}\n\n(See console for details.)`);
+    }
+
+    function loadSavedGames() {
+      const prefix = 'humanBingo_';
+      const keys = [];
+
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith(prefix)) keys.push(k);
+      }
+
+      const games = keys
+        .map(parseSavedGame)
+        .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+      savedGamesList.innerHTML = '';
+
+      if (games.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'empty';
+        empty.textContent = 'No saved games found on this device.';
+        // Put it where the list is
+        const li = document.createElement('li');
+        li.style.border = 'none';
+        li.style.padding = '0';
+        li.style.margin = '10px 0 0 0';
+        li.appendChild(empty);
+        savedGamesList.appendChild(li);
+        return;
+      }
+
+      games.forEach(game => {
+        const li = document.createElement('li');
+
+        const meta = document.createElement('div');
+        meta.className = 'game-meta';
+
+        const title = document.createElement('div');
+        title.className = 'game-title';
+        title.textContent = `${game.title} (${game.id})`;
+
+        const sub = document.createElement('div');
+        sub.className = 'game-sub';
+        const progressText = `${game.completed}/${(typeof game.total === 'number' ? game.total : '?')} completed`;
+        const tsText = game.timestamp ? ` • Last saved: ${formatTimestamp(game.timestamp)}` : '';
+        sub.textContent = progressText + tsText;
+
+        if (game.description) {
+          const desc = document.createElement('div');
+          desc.className = 'game-sub';
+          desc.textContent = game.description;
+          meta.appendChild(desc);
         }
-    </script>
+
+        meta.appendChild(title);
+        meta.appendChild(sub);
+
+        const btnRow = document.createElement('div');
+        btnRow.className = 'btn-row';
+
+        const loadBtn = document.createElement('button');
+        loadBtn.type = 'button';
+        loadBtn.className = 'btn btn-primary';
+        loadBtn.textContent = 'Load';
+        loadBtn.onclick = () => {
+          loadSavedProgress(game.id);
+        };
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'btn btn-danger';
+        deleteBtn.textContent = 'Delete';
+        deleteBtn.onclick = () => {
+          const ok = confirm(`Delete saved game "${game.id}"?\n\nThis cannot be undone.`);
+          if (!ok) return;
+          localStorage.removeItem(game.key);
+          loadSavedGames();
+        };
+
+        btnRow.appendChild(loadBtn);
+        btnRow.appendChild(deleteBtn);
+
+        li.appendChild(meta);
+        li.appendChild(btnRow);
+
+        savedGamesList.appendChild(li);
+      });
+    }
+
+    function openModal() {
+      savedGamesModal.style.display = 'flex';
+      loadSavedGames();
+    }
+
+    function closeModal() {
+      savedGamesModal.style.display = 'none';
+    }
+
+    // Events
+    savedGamesButton.addEventListener('click', openModal);
+    closeModalButton.addEventListener('click', closeModal);
+    refreshSavedGamesButton.addEventListener('click', loadSavedGames);
+
+    // Close modal when clicking backdrop
+    savedGamesModal.addEventListener('click', (e) => {
+      if (e.target === savedGamesModal) closeModal();
+    });
+
+    // Escape key closes modal
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && savedGamesModal.style.display !== 'none') {
+        closeModal();
+      }
+    });
+  </script>
 </body>
 </html>
