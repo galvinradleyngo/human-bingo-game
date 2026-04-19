@@ -639,8 +639,8 @@
                         setShowCustomizer(false);
                         setIsEditMode(false);
 
-                        // Generate QR code
-                        generateQRCode(currentShareLink);
+                        // Generate QR code locally in the browser
+                        await generateQRCode(currentShareLink);
 
                         // Ensure URL is correct after edit
                         window.history.pushState({}, '', currentShareLink);
@@ -664,8 +664,8 @@
                         setIsCustomGame(true);
                         setShowCustomizer(false);
 
-                        // Generate QR code
-                        generateQRCode(newShareLink);
+                        // Generate QR code locally in the browser
+                        await generateQRCode(newShareLink);
 
                         window.history.pushState({}, '', newShareLink);
 
@@ -701,18 +701,27 @@
                 showToast('Share link copied to clipboard!', 'success');
             };
 
-            const generateQRCode = (url) => {
+            const generateQRCode = async (url) => {
                 try {
                     console.log('🔄 Generating QR code for:', url);
+                    setQrCodeDataUrl('');
 
-                    // Use QR Server API - much more reliable
-                    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
+                    if (!window.QRCode || typeof window.QRCode.toDataURL !== 'function') {
+                        throw new Error('QR code library is unavailable');
+                    }
 
-                    console.log('✅ QR code URL generated:', qrUrl);
-                    setQrCodeDataUrl(qrUrl);
+                    const qrDataUrl = await window.QRCode.toDataURL(url, {
+                        width: 200,
+                        margin: 2,
+                        errorCorrectionLevel: 'M'
+                    });
+
+                    console.log('✅ QR code generated locally');
+                    setQrCodeDataUrl(qrDataUrl);
                 } catch (error) {
                     console.log('❌ Failed to generate QR code:', error);
-                    setQrCodeDataUrl('fallback');
+                    setQrCodeDataUrl('');
+                    showToast('Could not generate QR code. The share link still works.', 'error');
                 }
             };
 
