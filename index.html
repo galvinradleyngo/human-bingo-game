@@ -106,6 +106,7 @@
             const [passwordInput, setPasswordInput] = useState('');
             const [passwordError, setPasswordError] = useState('');
             const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
+            const [qrCodeImageUrl, setQrCodeImageUrl] = useState('');
             const [showShareSheet, setShowShareSheet] = useState(false);
             const [qrCodeStatus, setQrCodeStatus] = useState('idle');
 
@@ -341,6 +342,7 @@
                 const renderShareQr = async () => {
                     setQrCodeStatus('loading');
                     setQrCodeDataUrl('');
+                    setQrCodeImageUrl('');
 
                     // Wait until the modal canvas is mounted before drawing.
                     await new Promise((resolve) => window.requestAnimationFrame(resolve));
@@ -379,9 +381,8 @@
                             setQrCodeStatus('ready');
                         } catch (dataUrlError) {
                             if (cancelled) return;
-                            setQrCodeStatus('error');
-                            setQrCodeDataUrl('');
-                            showToast('Could not generate QR code. The share link still works.', 'error');
+                            setQrCodeImageUrl(`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(shareLink)}`);
+                            setQrCodeStatus('ready');
                         }
                     }
                 };
@@ -1196,6 +1197,12 @@
                                                             alt="QR Code for game link"
                                                             className="border border-gray-300 rounded-lg"
                                                         />
+                                                    ) : qrCodeImageUrl ? (
+                                                        <img
+                                                            src={qrCodeImageUrl}
+                                                            alt="QR Code for game link"
+                                                            className="border border-gray-300 rounded-lg"
+                                                        />
                                                     ) : (
                                                         <canvas
                                                             ref={qrCanvasRef}
@@ -1206,12 +1213,6 @@
                                                     )}
                                                 </div>
                                                 <p className="text-xs text-gray-600">Scan with any smartphone camera</p>
-                                            </div>
-                                        )}
-
-                                        {qrCodeStatus === 'error' && (
-                                            <div className="mb-4 p-4 bg-gray-50 rounded-xl border-2 border-gray-200 text-center text-sm text-gray-600">
-                                                QR generation failed, but the share link below still works.
                                             </div>
                                         )}
 
