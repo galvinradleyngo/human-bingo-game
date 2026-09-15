@@ -135,15 +135,14 @@
                                 const gameData = gameDoc.data();
                                 setGameId(gameIdParam);
                                 setIsCustomGame(true);
-                                
-                                // Only set these if we don't have saved data
-                                const saved = localStorage.getItem(`humanBingo_${gameIdParam}`);
-                                if (!saved) {
-                                    setGameTitle(gameData.title || 'Custom Human Bingo');
-                                    setGameDescription(gameData.description || 'Custom selfie bingo game!');
-                                    setCategories(gameData.categories || defaultCategories);
-                                }
-                                
+
+                                // Firestore is the source of truth for the game's definition,
+                                // even when this device has cached progress for it (that cache
+                                // only carries completedBoxes/photos/names, restored above).
+                                setGameTitle(gameData.title || 'Custom Human Bingo');
+                                setGameDescription(gameData.description || 'Custom selfie bingo game!');
+                                setCategories(gameData.categories || defaultCategories);
+
                                 showToast('Custom game loaded successfully!', 'success');
                             } else {
                                 showToast('Custom game not found', 'error');
